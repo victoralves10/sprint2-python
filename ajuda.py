@@ -19,17 +19,19 @@ from tabulate import tabulate
 """
 CREATE TABLE T_VEICULOS (
     id_veiculo INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    tipo VARCHAR2(50),
-    marca VARCHAR2(100),
-    modelo VARCHAR2(100),
-    ano_fabricacao INT,
-    placa VARCHAR2(10),
+    tipo VARCHAR2(50) NOT NULL,
+    marca VARCHAR2(100) NOT NULL,
+    modelo VARCHAR2(100) NOT NULL,
+    ano_fabricacao INT NOT NULL,
+    placa VARCHAR2(10) NOT NULL UNIQUE,
     cor VARCHAR2(30),
     combustivel VARCHAR2(20),
-    quilometragem INT,
-    status VARCHAR2(20),
-    valor_diaria FLOAT,
-    data_aquisicao DATE
+    quilometragem INT DEFAULT 0,
+    status VARCHAR2(20) DEFAULT 'Disponível',
+    valor_diaria FLOAT(10, 2) NOT NULL,
+    data_aquisicao DATE DEFAULT SYSDATE,
+    data_cadastro TIMESTAMP DEFAULT SYSTIMESTAMP,
+    data_ultima_atualizacao TIMESTAMP DEFAULT SYSTIMESTAMP
 );
 """
 
@@ -245,7 +247,12 @@ def buscar_resumo_veiculos(_conexao: oracledb.Connection) -> str:
 # pega todos os detalhes de um veículo específico pelo ID e mostra em tabela.
 def buscar_detalhes_veiculo_por_id(_conexao: oracledb.Connection, _id_veiculo: int) -> str:
     cur = _conexao.cursor()
-    comando_sql = """SELECT * FROM T_VEICULOS WHERE id_veiculo = :id_veiculo"""
+    comando_sql = """SELECT id_veiculo, tipo, marca, modelo, ano_fabricacao, placa, cor,
+                        combustivel, quilometragem, status, valor_diaria, data_aquisicao,
+                        data_cadastro, data_ultima_atualizacao
+                 FROM T_VEICULOS
+                 WHERE id_veiculo = :id_veiculo"""
+
     cur.execute(comando_sql, {"id_veiculo": _id_veiculo})
     dados_detalhados = cur.fetchall()
     cur.close()
@@ -256,8 +263,10 @@ def buscar_detalhes_veiculo_por_id(_conexao: oracledb.Connection, _id_veiculo: i
 
     colunas = [
         "ID", "Tipo", "Marca", "Modelo", "Ano Fab.", "Placa", "Cor",
-        "Combustível", "Km", "Status", "Valor Diária", "Data Aquisição"
+        "Combustível", "Km", "Status", "Valor Diária", "Data Aquisição",
+        "Data Cadastro", "Última Atualização"
     ]
+
 
     tabela_detalhada = tabulate(
         dados_detalhados,
@@ -305,16 +314,25 @@ def formatar_lista_veiculos_em_tabela(_lista_dados_veiculos: list) -> str:
         print("Nenhum veículo encontrado.")
         return None
 
+    for veiculo in _lista_dados_veiculos:
+        for chave in ["DATA_AQUISICAO", "DATA_CADASTRO", "DATA_ULTIMA_ATUALIZACAO"]:
+            if isinstance(veiculo.get(chave), datetime):
+                veiculo[chave] = veiculo[chave].strftime("%d/%m/%Y")
+
     chaves_colunas_db = [
         "ID_VEICULO", "TIPO", "MARCA", "MODELO", "ANO_FABRICACAO",
         "PLACA", "COR", "COMBUSTIVEL", "QUILOMETRAGEM",
-        "STATUS", "VALOR_DIARIA", "DATA_AQUISICAO"
+        "STATUS", "VALOR_DIARIA", "DATA_AQUISICAO",
+        "DATA_CADASTRO", "DATA_ULTIMA_ATUALIZACAO"
     ]
+
 
     headers_tabela = [
         "ID", "Tipo", "Marca", "Modelo", "Ano Fab.", "Placa", "Cor",
-        "Combustível", "Km", "Status", "Valor Diária", "Data Aquisição"
+        "Combustível", "Km", "Status", "Valor Diária", "Data Aquisição",
+        "Data Cadastro", "Última Atualização"
     ]
+
 
     # Cria a lista de listas para o tabulate, usando as chaves dos dicionários
     dados_para_tabela = []
@@ -618,7 +636,7 @@ while conectado:
                         case 1:
                             limpar_terminal()
                             exibir_titulo_centralizado("LISTA DE TODOS OS VEÍCULOS", 170)
-                            tabela_formatada = formatar_lista_veiculos_em_tabela(todos_veiculos, campo)
+                            tabela_formatada = formatar_lista_veiculos_em_tabela(todos_veiculos)
                             if tabela_formatada:
                                 print(tabela_formatada)
                             else:

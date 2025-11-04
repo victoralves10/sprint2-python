@@ -44,6 +44,7 @@ CREATE TABLE T_PACIENTE (
     ESPECIALIDADE      VARCHAR2(50),
     STATUS_CONSULTA    VARCHAR2(20)
 );
+
 """
 # Após isso, o código estará pronto para ser executado.
 
