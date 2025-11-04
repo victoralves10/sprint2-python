@@ -3,20 +3,18 @@ import re
 import json
 from datetime import datetime, date
 
-
 import oracledb
-import pandas as pd
 import requests
 from tabulate import tabulate
 
 # ==========================================================
-# INSTRUÇÕES PARA EXECUTAR O PROGRAMA
+#   INSTRUÇÕES PARA EXECUTAR O PROGRAMA
 # ==========================================================
 # Execute o comando SQL abaixo no 'Oracle SQL Developer' para criar as tabelas necessárias.
 # Instale as bibliotecas exigidas no terminal:
     # pip install oracledb
-    # pip install pandas
     # pip install tabulate
+    # pip install requests
 
 # COMANDO SQL PARA ORACLE
 """
@@ -49,6 +47,10 @@ CREATE TABLE T_PACIENTE (
 """
 # Após isso, o código estará pronto para ser executado.
 
+# Execute o programa pelo arquivo principal: main.py
+# (no terminal: python main.py)
+
+
 # ==========================================================
 #   SUBALGORITMOS
 # ==========================================================
@@ -57,37 +59,28 @@ CREATE TABLE T_PACIENTE (
 #   EXIBIÇÃO
 # ==========================================================
 
-# limpa a tela do terminal dependendo do sistema.
 def limpar_terminal() -> None:
+    """Limpa a tela do terminal, compatível com Windows e Unix."""
     os.system("cls" if os.name == "nt" else "clear")
 
-# mostra um título centralizado com linhas decorativas em cima e embaixo.
 def exibir_titulo_centralizado(_texto: str, _largura_caracteres: int) -> None:
+    """Mostra um título centralizado com linhas decorativas acima e abaixo."""
     print("=-" * (_largura_caracteres // 2))
     print(_texto.center(_largura_caracteres))
     print("=-" * (_largura_caracteres // 2), "\n")
 
-# mostra uma linha repetindo o símbolo que passar.
 def imprimir_linha_separadora(simbolo: str, quantidade: int) -> None:
+    """Mostra uma linha formada pela repetição de um símbolo."""
     print()
-    print(f"{simbolo * quantidade}")
+    print(simbolo * quantidade)
     print()
 
 # ==========================================================
-#   VALIDAÇÃO DE DADOS
+#   VALIDAÇÃO DE DADOS (TIPOS BÁSICOS)
 # ==========================================================
-'''
-# obter string com mensagem personalizável
-def obter_str(_msg: str = None) -> str:
-    _msg = _msg or ""
-    entrada_str = ""
-    while not entrada_str:
-        entrada_str = str(input(_msg)).strip()
-    return entrada_str
-'''
 
-# obter int com mensagem personalizável
 def obter_int(_msg: str = None) -> int:
+    """Obtém um número inteiro digitado pelo usuário, com mensagem opcional."""
     _msg = _msg or ""
     entrada_int = None
     while entrada_int is None:
@@ -97,8 +90,8 @@ def obter_int(_msg: str = None) -> int:
             entrada_int = None
     return entrada_int
 
-# obter float com mensagem personalizável
 def obter_float(_msg: str = None) -> float:
+    """Obtém um número float digitado pelo usuário, com mensagem opcional."""
     _msg = _msg or ""
     entrada_float = None
     while entrada_float is None:
@@ -108,8 +101,8 @@ def obter_float(_msg: str = None) -> float:
             entrada_float = None
     return entrada_float
 
-# obter data com mensagem personalizável
 def obter_data(_msg: str = None) -> datetime:
+    """Obtém um uma data digitado pelo usuário, com mensagem opcional. ex 00/00/0000"""
     _msg = _msg or ""
     data = None
     while data is None:
@@ -122,9 +115,8 @@ def obter_data(_msg: str = None) -> datetime:
             data = None
     return data.strftime("%d/%m/%Y")
 
-
-# obter perguntar Sim ou Não retornando True ou False com mensagem personalizável
 def obter_sim_nao(_msg: str = None) -> bool:
+    """Pergunta ao usuário uma questão de Sim/Não e retorna True para 'S' ou False para 'N', com mensagem personalizável."""
     _msg = _msg or ""
     entrada_sim_nao = ""
     resultado = False
@@ -138,8 +130,8 @@ def obter_sim_nao(_msg: str = None) -> bool:
             resultado = False
     return resultado
 
-# obter um intervaldo de números retornando um número entre eles com mensagem personalizável
 def obter_int_invervalado(_msg: str, _min: int, _max: int) -> int:
+    """Solicita ao usuário um número inteiro entre os valores mínimos e máximos informados, com mensagem personalizável."""
     entrada_valida = False
     while not entrada_valida:
         entrada_numero = obter_int(_msg)
@@ -149,33 +141,20 @@ def obter_int_invervalado(_msg: str, _min: int, _max: int) -> int:
             continue
     return entrada_numero
 
-"""# obter opções com mensagem personalizável
-def obter_opcoes(_msg: str = None, _opcoes: dict = None):
-    _msg = _msg or ""
-    if not _opcoes:
-        return None
-
-    escolha = None
-    while escolha not in _opcoes:
-        entrada = str(input(_msg).strip())
-        if entrada in _opcoes:
-            escolha = entrada
-    return _opcoes[escolha]"""
-
 # ==========================================================
 #   VALIDAÇÃO DE DADOS PARA CADASTRO (PACIENTE)
 # ==========================================================
 
-# obter nome
 def obter_nome(_msg: str = None) -> str:
+    """Solicita ao usuário um nome (ou texto) e garante que o campo não fique vazio, com mensagem personalizável."""
     _msg = _msg or ""
     entrada_str = ""
     while not entrada_str:
         entrada_str = str(input(_msg)).strip()
     return entrada_str
 
-# obter sexo
 def obter_sexo(_msg: str = None) -> str:
+    """Solicita ao usuário o sexo e retorna 'M' para masculino ou 'F' para feminino, com mensagem personalizável."""
     _msg = _msg or ""
     sexo = ""
     resultado = ""
@@ -189,25 +168,24 @@ def obter_sexo(_msg: str = None) -> str:
             resultado = 'F'
     return resultado
 
-
-# obter cpf ex(12345678901)
 def obter_cpf(_msg: str = None) -> str:
+    """Solicita ao usuário um CPF no formato numérico (11 dígitos) e valida a entrada, com mensagem personalizável. ex 12345678901"""
     _msg = _msg or ""
     cpf = ""
     while not (cpf.isdigit() and len(cpf) == 11):
         cpf = input(_msg).strip()
     return cpf
 
-# obter número rg ex(123456789)
 def obter_rg(_msg: str = None) -> str:
+    """Obtém um número de RG (somente números, 9 dígitos) com mensagem personalizável. ex 123456789"""
     _msg = _msg or ""
     rg = ""
     while not (rg.isdigit() and len(rg) == 9):
         rg = str(input(_msg).strip())
     return rg
 
-# obter estado civil
 def obter_estado_civil(_msg: str = None) -> str:
+    """Retorna o estado civil escolhido pelo usuário; recebe o menu numerado por parâmetro"""
     _msg = _msg or ""
     opcoes_estado_civil = {
         1: "solteiro",
@@ -222,8 +200,9 @@ def obter_estado_civil(_msg: str = None) -> str:
 
     return opcoes_estado_civil[escolha]
 
-# obter endereco ex(12345678)
 def obter_endereco(_msg: str = None) -> dict:
+    """Consulta a API ViaCEP com o CEP informado e retorna o endereço completo, com mensagem personalizável. ex 12345678.
+    API pública ViaCEP (https://viacep.com.br)."""
     _msg = _msg or ": "
     endereco = None
 
@@ -249,28 +228,28 @@ def obter_endereco(_msg: str = None) -> dict:
 
     return endereco
 
-# obter CEP a partir do endereço
 def obter_cep(_endereco: dict) -> str:
+    """Retorna o CEP do endereço obtido pela função obter_endereco()."""
     return _endereco.get("cep", "")
 
-# obter rua/logradouro a partir do endereço
 def obter_rua(_endereco: dict) -> str:
+    """Retorna o logradouro do endereço obtido pela função obter_endereco()."""
     return _endereco.get("logradouro", "")
 
-# obter bairro a partir do endereço
 def obter_bairro(_endereco: dict) -> str:
+    """Retorna o bairro do endereço obtido pela função obter_endereco()."""
     return _endereco.get("bairro", "")
 
-# obter cidade a partir do endereço
 def obter_cidade(_endereco: dict) -> str:
+    """Retorna a cidade do endereço obtido pela função obter_endereco()."""
     return _endereco.get("cidade", "")
 
-# obter estado a partir do endereço
 def obter_estado(_endereco: dict) -> str:
+    """Retorna o estado do endereço obtido pela função obter_endereco()."""
     return _endereco.get("estado", "")
 
-# obter telefone/celular com regex ex(11-978777404)
 def obter_telefone(_msg: str = None) -> str:
+    """Valida o telefone usando regex, garantindo 11 dígitos numéricos, com mensagem personalizável. ex 10123456789"""
     _msg = _msg or ""
     telefone = ""
     padrao = re.compile(r"^\d{11}$")
@@ -279,8 +258,9 @@ def obter_telefone(_msg: str = None) -> str:
         telefone = str(input(_msg)).strip().replace(" ", "").replace("-", "")
     return telefone
 
-# obter email
+
 def obter_email(_msg: str = None) -> str:
+    """Valida e retorna um e-mail usando regex, garantindo formato correto (ex: nome@dominio.com)."""
     _msg = _msg or ""
     padrao = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
     email = ""
@@ -293,8 +273,8 @@ def obter_email(_msg: str = None) -> str:
 #   VALIDAÇÃO DE DADOS PARA CADASTRO (CONSULTA)
 # ==========================================================
 
-# obter data da consulta: dd/mm/aaaa hh:mm
 def obter_data_consulta(_msg: str = None) -> datetime:
+    """Obtém a data e hora da consulta no formato dd/mm/aaaa hh:mm."""
     _msg = _msg or ""
     data = None
     while data is None:
@@ -307,8 +287,8 @@ def obter_data_consulta(_msg: str = None) -> datetime:
             data = None
     return data.strftime("%d/%m/%Y %H:%M")
 
-# obter tipo de consulta
 def obter_tipo_consulta(_msg: str = None) -> str:
+    """Retorna o tipo de consulta escolhido pelo usuário; recebe o menu numerado por parâmetro, se desejado."""
     _msg = _msg or ""
     opcoes_tipo_consulta = {
         1: "retorno",
@@ -324,8 +304,8 @@ def obter_tipo_consulta(_msg: str = None) -> str:
 
     return opcoes_tipo_consulta[escolha]
 
-# obter especialidade
 def obter_especialidade(_msg: str = None) -> str:
+    """Retorna a especialidade médica escolhida pelo usuário; recebe o menu numerado por parâmetro, se desejado."""
     _msg = _msg or ""
     opcoes_especialidade = {
         1: "cardiologia",
@@ -343,8 +323,8 @@ def obter_especialidade(_msg: str = None) -> str:
 
     return opcoes_especialidade[escolha]
 
-# obter status consulta
 def obter_status_consulta(_msg: str = None) -> str:
+    """Retorna o status da consulta escolhido pelo usuário; recebe o menu numerado por parâmetro, se desejado."""
     _msg = _msg or ""
     opcoes_status_consulta = {
         1: "realizada",
@@ -363,7 +343,9 @@ def obter_status_consulta(_msg: str = None) -> str:
 # ==========================================================
 
 def solicitar_dados_paciente() -> dict:
-    # ================== DADOS DO PACIENTE ==================
+    """Solicita e retorna todos os dados do paciente e da consulta em formato de dicionário."""
+
+    # ========= DADOS DO PACIENTE =========
     nome_completo = obter_nome("Nome do paciente: ")
     imprimir_linha_separadora("=-", 20)
 
@@ -405,7 +387,7 @@ Escolha: """)
     convenio = obter_sim_nao("Possui convênio/plano de saúde? [S/N]: ")
     imprimir_linha_separadora("=-", 20)
 
-    # ================== DADOS DA CONSULTA ==================
+    # ========= DADOS DA CONSULTA =========
     data_hora_consulta = obter_data_consulta("Digite a data e hora da consulta (exemplo: 25/10/2025 14:30)\nData e Hora: ")
     imprimir_linha_separadora("=-", 20)
 
@@ -435,17 +417,17 @@ Escolha: """)
 3 - Absenteísmo
 Escolha: """)
 
-    # ================== RETORNO ==================
+    # ========= RETORNO =========
     return {
         # Dados do paciente
-        "nome_completo": nome_completo,#[:150],  # limita 150 caracteres
+        "nome_completo": nome_completo,
         "data_nascimento": data_nascimento,
         "sexo": sexo,
-        "cpf": cpf[:11],  # garante 11 caracteres
-        "rg": rg[:9],     # garante 9 caracteres
+        "cpf": cpf[:11],
+        "rg": rg[:9],
         "estado_civil": estado_civil[:20],
         "brasileiro": "S" if brasileiro else "N",
-        "cep": obter_cep(endereco).replace("-", ""),  # remove hífen
+        "cep": obter_cep(endereco).replace("-", ""), # remove hífen
         "rua": obter_rua(endereco)[:100],
         "bairro": obter_bairro(endereco)[:50],
         "cidade": obter_cidade(endereco)[:50],
@@ -461,78 +443,99 @@ Escolha: """)
         "status_consulta": status_consulta[:20]
     }
 
-
 # ==========================================================
 #   SOLICITAÇÃO DE COLUNAS DA TABELA PACIENTE
 # ==========================================================
 
-# função que escolhe quais campos da tabela serão escolhidos e retorna em lista
 def solicita_campos(colunas: dict, _numeros: list) -> str:
+    """Retorna os nomes das colunas selecionadas a partir dos números informados."""
     nomes = []
     for i in _numeros:
         if i in colunas:
             nomes.append(colunas[i])
     return ", ".join(nomes)
 
-"""
-# dicionário de colunas
-colunas = {
-    1: "ID_PACIENTE",
-    2: "NM_COMPLETO",
-    3: "DT_NASCIMENTO",
-    4: "SEXO",
-    5: "CPF",
-    6: "RG",
-    7: "ESTADO_CIVIL",
-    8: "BRASILEIRO",
-    9: "CEP",
-    10: "RUA",
-    11: "BAIRRO",
-    12: "CIDADE",
-    13: "ESTADO",
-    14: "NUMERO_ENDERECO",
-    15: "CELULAR",
-    16: "EMAIL",
-    17: "CONVENIO",
-    18: "DT_HORA_CONSULTA",
-    19: "TIPO_CONSULTA",
-    20: "ESPECIALIDADE",
-    21: "STATUS_CONSULTA"
-}
+def menu_selecao_colunas(colunas: dict, _msg, _titulo) -> list:
+    """Exibe um menu para o usuário selecionar colunas, permite escolher todas ('A') ou sair ('0').
+    _titulo é para a função exibir_titulo_centralizado
+    _msg é para a mensagem do ménu
+    colunas é as colunas para exibir
+    """
 
-# lista de índices escolhidos
-_numeros = []
+    selecionadas = []
+    entrada = ""
 
-# loop de seleção
-entrada = None
-while entrada != "0":
-    entrada = input("Digite o número da coluna (0 para sair, 'A' para todas): ").strip().upper()
-    
-    if entrada == "0":
-        break
-    elif entrada == "A":
-        # seleciona todas as colunas
-        _numeros = list(colunas.keys())
-        break
-    elif entrada.isdigit():
-        num = int(entrada)
-        if num in colunas and num not in _numeros:
-            _numeros.append(num)
+    while entrada != "0":
+        limpar_terminal()
 
+        
+        exibir_titulo_centralizado(_titulo, 60)
+        print(_msg)
 
+        entrada = input("Digite o número da coluna: ").strip().upper()
 
-# exemplo de uso
-campos_selecionados = solicita_campos(colunas, _numeros)
-print("Colunas selecionadas:", campos_selecionados)
-"""
+        if entrada == "0":
+            break
+        elif entrada == "A":
+            selecionadas = list(colunas.keys())
+            break
+        elif entrada.isdigit():
+            num = int(entrada)
+            if num in colunas and num not in selecionadas:
+                selecionadas.append(num)
+
+    return selecionadas
+
+# ==========================================================
+#   VISUALIZAÇÃO DE DADOS (TABULATE)
+# ==========================================================
+
+def imprimir_pacientes_tabulate(lista_de_pacientes: list, largura_max: int = 20) -> None:
+    """Imprime pacientes em formato de tabela formatada."""
+    lista_formatada = []
+
+    for paciente in lista_de_pacientes:
+        registro = {}
+
+        for k, v in paciente.items():
+            if v is None:
+                registro[k] = ""
+
+            elif isinstance(v, datetime):
+                if v.time() == datetime.min.time():
+                    registro[k] = v.strftime("%d/%m/%Y")
+                else:
+                    registro[k] = v.strftime("%d/%m/%Y %H:%M")
+
+            elif isinstance(v, date):
+                registro[k] = v.strftime("%d/%m/%Y")
+
+            else:
+                texto = str(v)
+                linhas = []
+                for i in range(0, len(texto), largura_max):
+                    linhas.append(texto[i:i+largura_max])
+                registro[k] = "\n".join(linhas)
+
+        lista_formatada.append(registro)
+
+    print(
+        tabulate(
+            lista_formatada,
+            headers="keys",
+            tablefmt="fancy_grid",
+            numalign="right",
+            stralign="left"
+        )
+    )
 
 # ==========================================================
 #   CRUD BANCO DE DADOS
 # ==========================================================
 
 # ========= CONEXÃO BANCO DE DADOS =========
-# tenta conectar ao banco de dados oracle. retorno: se a conexão for bem-sucedida: (True, None) - Se falhar: (False, mensagem de erro)
 def conectar_oracledb(_user: str, _password: str, _dsn: str) -> tuple[bool, any]:
+    """Tenta conectar ao Oracle e retorna (True, conexão) ou (False, erro)."""
     retorno = None
 
     try:
@@ -550,25 +553,20 @@ def conectar_oracledb(_user: str, _password: str, _dsn: str) -> tuple[bool, any]
     
     return retorno
 
-
 # ========= FUNÇÃO PARA VERIFICAR SE TABELA TEM DADOS =========
-# verifica se a tabela possui pelo menos 1 registro. Retorna True se tiver dados, False se estiver vazia.
 def verifica_tabela(_conexao: oracledb.Connection, nome_tabela: str) -> bool:
-    """
-    Verifica se a tabela possui pelo menos 1 registro.
-    Retorna True se tiver dados, False se estiver vazia.
-    """
+    """Verifica se a tabela possui registros e retorna True ou False."""
     cur = _conexao.cursor()
     try:
         cur.execute(f"SELECT 1 FROM {nome_tabela} WHERE ROWNUM = 1")
-        resultado = cur.fetchone()
+        resultado = cur.fetchone() # pegar apenas uma linha
         return bool(resultado)
     finally:
         cur.close()
 
 # ========= INSERIR PACIENTE =========
-# tenta inserir paciente no banco. retorna (True, None) se sucesso, (False, erro) se falhar
 def inserir_paciente(_conexao: oracledb.Connection, _dados_paciente: dict) -> tuple[bool, any]:
+    """Insere um paciente no banco e retorna (True, None) se sucesso ou (False, erro) se falhar."""
     retorno = None
     try:
         comando_sql = """
@@ -592,182 +590,9 @@ def inserir_paciente(_conexao: oracledb.Connection, _dados_paciente: dict) -> tu
         retorno = (False, e)
     return retorno
 
-# ========= SELECT PACIENTE =========
-# Busca todos os pacientes no banco e retorna uma lista de dicionários, cada dicionário representa um paciente.
-def buscar_todos_pacientes_como_dicionario(_conexao: oracledb.Connection, colunas: dict, _numeros_colunas: list = None) -> list:
-    """
-    Retorna uma lista de dicionários com os pacientes, convertendo datas para datetime.
-    """
-    if not _numeros_colunas:
-        _numeros_colunas = list(colunas.keys())
-
-    campos_selecionados = ", ".join([colunas[i] for i in _numeros_colunas])
-
-    cur = _conexao.cursor()
-    cur.execute(f"SELECT {campos_selecionados} FROM T_PACIENTE")
-    nomes_colunas = [col[0].upper() for col in cur.description]
-    resultados_db = cur.fetchall()
-    cur.close()
-
-    lista_de_pacientes = []
-    for linha in resultados_db:
-        registro = {}
-        for i, valor in enumerate(linha):
-            chave = nomes_colunas[i]
-            # Converter data de nascimento para datetime.date
-            if chave == "DT_NASCIMENTO" and isinstance(valor, datetime):
-                registro[chave] = valor.date()  # só dia/mês/ano
-            else:
-                registro[chave] = valor
-        lista_de_pacientes.append(registro)
-
-    return lista_de_pacientes
-
-# ========= PRINT DADOS =========
-def imprimir_pacientes_tabulate(lista_de_pacientes: list, largura_max: int = 20) -> None:
-    lista_formatada = []
-
-    for paciente in lista_de_pacientes:
-        registro = {}
-        for chave, valor in paciente.items():
-            if valor is None:
-                registro[chave] = ""
-            elif isinstance(valor, datetime):
-                registro[chave] = valor.strftime("%d/%m/%Y %H:%M")
-            elif isinstance(valor, date):
-                registro[chave] = valor.strftime("%d/%m/%Y")
-            else:
-                texto = str(valor)
-                linhas = [texto[i:i+largura_max] for i in range(0, len(texto), largura_max)]
-                registro[chave] = "\n".join(linhas)
-        lista_formatada.append(registro)
-
-    print(tabulate(
-        lista_formatada, 
-        headers="keys", 
-        tablefmt="fancy_grid", 
-        numalign="right",
-        stralign="left"
-    ))
-
-# ==========================================================
-# PROCEDIMENTO: MENU DE SELEÇÃO DE COLUNAS
-# ==========================================================
-def menu_selecao_colunas(colunas: dict, _msg, _titulo) -> list:
-    """
-    Procedimento que permite ao usuário selecionar colunas para exibir.
-    Digitar 'A' seleciona todas, '0' encerra a seleção.
-    Retorna a lista de índices escolhidos.
-    """
-    selecionadas = []
-    entrada = ""
-
-    while entrada != "0":
-        limpar_terminal()  # limpa a tela a cada iteração
-
-        # imprime o menu com as colunas
-        exibir_titulo_centralizado(_titulo, 60)
-        print(_msg)
-
-        entrada = input("Digite o número da coluna: ").strip().upper()
-
-        if entrada == "0":
-            break
-        elif entrada == "A":
-            selecionadas = list(colunas.keys())
-            break
-        elif entrada.isdigit():
-            num = int(entrada)
-            if num in colunas and num not in selecionadas:
-                selecionadas.append(num)
-
-    return selecionadas
-
-# ========= BUSCAR PACIENTE POR TEXTO =========
-# Busca pacientes por texto em um campo específico e retorna lista de dicionários.
-def buscar_paciente_por_texto(_conexao: oracledb.Connection, _campo_where: str, _texto: str, _colunas_exibir: list) -> list:
-    """
-    Busca pacientes por texto em um campo específico e retorna lista de dicionários.
-
-    _conexao       : conexão Oracle
-    _campo_where   : campo textual onde será feita a busca (WHERE)
-    _texto         : texto a buscar
-    _colunas_exibir: lista de nomes de colunas para exibir no SELECT
-
-    Retorna lista de dicionários ou lista vazia se não houver resultados.
-    """
-
-    campos_validos = [
-        "NM_COMPLETO", "ESTADO_CIVIL", "CEP", "RUA", "BAIRRO",
-        "CIDADE", "ESTADO", "CELULAR", "EMAIL",
-        "ESPECIALIDADE", "STATUS_CONSULTA", "TIPO_CONSULTA"
-    ]
-
-    if _campo_where.upper() not in campos_validos:
-        print("\nErro: campo inválido para busca textual.\n")
-        return []
-
-    if not _colunas_exibir:
-        print("\nErro: nenhuma coluna selecionada para exibição.\n")
-        return []
-
-    campos_select = ", ".join(_colunas_exibir)
-
-    cur = _conexao.cursor()
-    comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE UPPER({_campo_where}) LIKE :texto"
-
-    try:
-        cur.execute(comando_sql, {"texto": f"%{_texto.upper()}%"})
-        resultados = cur.fetchall()
-        nomes_colunas = [col[0].upper() for col in cur.description]
-    except Exception as e:
-        print(f"\nErro ao executar consulta SQL: {e}\n")
-        cur.close()
-        return []
-    finally:
-        cur.close()
-
-    lista_pacientes = []
-    for linha in resultados:
-        registro = { nomes_colunas[i]: linha[i] for i in range(len(nomes_colunas)) }
-        lista_pacientes.append(registro)
-
-    return lista_pacientes
-
-# ========= BUSCAR PACIENTE POR NÚMERO =========
-# Busca pacientes por valor numérico em um campo específico usando um operador relacional.
-def buscar_paciente_por_numero(_conexao: oracledb.Connection, _campo: str, _operador: str, _valor: int, _colunas_exibir: list) -> list:
-    """
-    Busca pacientes por valor numérico em um campo específico usando um operador.
-    """
-    campos_select = ", ".join(_colunas_exibir)
-    cur = _conexao.cursor()
-    comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE {_campo} {_operador} :valor"
-
-    try:
-        cur.execute(comando_sql, {"valor": _valor})
-        resultados = cur.fetchall()
-        nomes_colunas = [col[0].upper() for col in cur.description]
-    except Exception as e:
-        print(f"\nErro ao executar consulta SQL: {e}\n")
-        cur.close()
-        return []
-    finally:
-        cur.close()
-
-    lista_pacientes = []
-    for linha in resultados:
-        registro = { nomes_colunas[i]: linha[i] for i in range(len(nomes_colunas)) }
-        lista_pacientes.append(registro)
-
-    return lista_pacientes
-
 # ========= UPDATE PACIENTE =========
 def atualizar_paciente(_conexao: oracledb.Connection, _id_paciente: int, _dados_paciente: dict) -> tuple[bool, any]:
-    """
-    Atualiza os dados de um paciente existente com base no ID.
-    Retorna (True, None) se sucesso, (False, erro) se falhar.
-    """
+    """Atualiza os dados de um paciente pelo ID e retorna (True, None) ou (False, erro)."""
     try:
         comando_sql = """
         UPDATE T_PACIENTE
@@ -807,23 +632,196 @@ def atualizar_paciente(_conexao: oracledb.Connection, _id_paciente: int, _dados_
     except Exception as e:
         return (False, e)
 
+# ========= SELECT PACIENTE =========
+def buscar_todos_pacientes_como_dicionario(_conexao: oracledb.Connection, colunas: dict, _numeros_colunas: list = None) -> list:
+    """Busca todos os pacientes e retorna uma lista de dicionários com seus dados formatados."""
+    
+    # Se não foram passadas colunas, usa todas as chaves do dicionário 'colunas'
+    if not _numeros_colunas:
+        _numeros_colunas = []
+
+        # Preenche '_numeros_colunas' com todos os índices disponíveis
+        for key in colunas.keys():
+            _numeros_colunas.append(key)
+
+    # Monta a string das colunas que serão selecionadas na query
+    campos_selecionados = ""
+    for i, col in enumerate(_numeros_colunas):
+
+        # Adiciona a coluna, separando por vírgula se não for a primeira
+        if i == 0:
+            campos_selecionados += colunas[col]
+        else:
+            campos_selecionados += ", " + colunas[col]
+
+    # Executa a query e obtém os resultados
+    cur = _conexao.cursor()
+    cur.execute(f"SELECT {campos_selecionados} FROM T_PACIENTE")
+
+    # Pega os nomes das colunas do resultado e transforma em maiúsculas
+    nomes_colunas = []
+    for col in cur.description:
+        nomes_colunas.append(col[0].upper())
+
+    # Busca todas as linhas retornadas pelo banco e fecha o cursor
+    resultados_db = cur.fetchall()
+    cur.close()
+
+    # Constrói uma lista de dicionários, um para cada paciente
+    lista_de_pacientes = []
+    for linha in resultados_db:
+        registro = {}
+        for i in range(len(linha)):
+            chave = nomes_colunas[i]
+            valor = linha[i]
+
+            # Converter data de nascimento para datetime.date (somente dia/mês/ano)
+            if chave == "DT_NASCIMENTO" and isinstance(valor, datetime):
+                registro[chave] = valor.date()  # só dia/mês/ano
+            else:
+                registro[chave] = valor
+        lista_de_pacientes.append(registro)
+
+    # Retorna a lista completa de pacientes como dicionários
+    return lista_de_pacientes
+
+# ========= SELECT PACIENTE POR TEXTO =========
+def buscar_paciente_por_texto(_conexao: oracledb.Connection, _campo_where: str, _texto: str, _colunas_exibir: list) -> list:
+    """Busca pacientes por texto em um campo e retorna lista de dicionários."""
+    
+    campos_validos = [
+        "NM_COMPLETO", "ESTADO_CIVIL", "CEP", "RUA", "BAIRRO",
+        "CIDADE", "ESTADO", "CELULAR", "EMAIL",
+        "ESPECIALIDADE", "STATUS_CONSULTA", "TIPO_CONSULTA"
+    ]
+
+    if _campo_where.upper() not in campos_validos:
+        print("\nErro: campo inválido para busca textual.\n")
+        return []
+
+    if not _colunas_exibir:
+        print("\nErro: nenhuma coluna selecionada para exibição.\n")
+        return []
+
+    campos_select = ", ".join(_colunas_exibir)
+
+    cur = _conexao.cursor()
+    comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE UPPER({_campo_where}) LIKE :texto"
+
+    try:
+        cur.execute(comando_sql, {"texto": f"%{_texto.upper()}%"})
+        resultados = cur.fetchall()
+        
+        nomes_colunas = []
+        for col in cur.description:
+            nomes_colunas.append(col[0].upper())
+            
+    except Exception as e:
+        print(f"\nErro ao executar consulta SQL: {e}\n")
+        cur.close()
+        return []
+    finally:
+        cur.close()
+
+    lista_pacientes = []
+    for linha in resultados:
+        registro = {}
+        i = 0
+        for valor in linha:
+            chave = nomes_colunas[i]
+            registro[chave] = valor
+            i += 1
+        lista_pacientes.append(registro)
+
+    return lista_pacientes
+
+# ========= SELECT PACIENTE POR NÚMERO =========
+def buscar_paciente_por_numero(_conexao: oracledb.Connection, _campo: str, _operador: str, _valor: int, _colunas_exibir: list) -> list:
+    """Busca pacientes por valor numérico em um campo usando operador e retorna lista de dicionários."""
+    
+    campos_select = ", ".join(_colunas_exibir)
+    cur = _conexao.cursor()
+    comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE {_campo} {_operador} :valor"
+
+    try:
+        cur.execute(comando_sql, {"valor": _valor})
+        resultados = cur.fetchall()
+        
+        # For à moda antiga para nomes das colunas
+        nomes_colunas = []
+        for col in cur.description:
+            nomes_colunas.append(col[0].upper())
+            
+    except Exception as e:
+        print(f"\nErro ao executar consulta SQL: {e}\n")
+        cur.close()
+        return []
+    finally:
+        cur.close()
+
+    # For à moda antiga para criar lista de dicionários
+    lista_pacientes = []
+    for linha in resultados:
+        registro = {}
+        i = 0
+        for valor in linha:
+            chave = nomes_colunas[i]
+            registro[chave] = valor
+            i += 1
+        lista_pacientes.append(registro)
+
+    return lista_pacientes
+
+# ========= DELETE PACIENTE =========
+def deletar_paciente(_conexao: oracledb.Connection, _id_paciente: int) -> tuple[bool, any]:
+    """Remove paciente pelo ID e retorna status da operação."""
+    try:
+        comando_sql = "DELETE FROM T_PACIENTE WHERE ID_PACIENTE = :id"
+        cur = _conexao.cursor()
+        cur.execute(comando_sql, {"id": _id_paciente})
+        # Verifica se alguma linha foi afetada
+        if cur.rowcount == 0: # verifica quantas linhas foram realmente deletadas.
+            _conexao.rollback()
+            cur.close()
+            return (False, "Nenhum paciente encontrado com este ID para remover.")
+
+        _conexao.commit()
+        cur.close()
+        return (True, None)
+    except Exception as e:
+        return (False, e)
+
+# ========= DELETE TODOS OS PACIENTES =========
+def limpar_todos_pacientes(_conexao: oracledb.Connection) -> tuple[bool, any]:
+    """Apaga todos os pacientes do banco e retorna status da operação."""
+    try:
+        comando_sql = "DELETE FROM T_PACIENTE"
+        cur = _conexao.cursor()
+        cur.execute(comando_sql)
+        
+        _conexao.commit()
+        cur.close()
+        
+        return (True, None)
+
+    except Exception as e:
+        return (False, e)
+
 # ==========================================================
-# EXPORTAR PACIENTES PARA JSON
+#   EXPORTAR PACIENTES PARA JSON
 # ==========================================================
 
 def exportar_para_json(_conexao: oracledb.Connection, _colunas: list, _nome_arquivo: str = "pacientes.json") -> tuple[bool, any]:
-    """
-    Exporta pacientes para arquivo JSON.
-    Retorna (True, None) se sucesso, (False, erro) se falhar.
-    """
+    #  """Exporta pacientes para JSON e retorna (True, None) se bem-sucedido ou (False, erro) se falhar."""
     try:
-        # Monta dicionário de colunas no formato esperado pela função de busca
-        colunas_dict = {i + 1: c for i, c in enumerate(_colunas)}
+        colunas_dict = {}
+        for i, c in enumerate(_colunas):
+            colunas_dict[i + 1] = c
 
-        # Busca os pacientes
-        lista_pacientes = buscar_todos_pacientes_como_dicionario(
-            _conexao, colunas_dict, list(range(1, len(_colunas) + 1))
-        )
+        indices = list(range(1, len(_colunas) + 1))
+
+        lista_pacientes = buscar_todos_pacientes_como_dicionario(_conexao, colunas_dict, indices)
+
 
         if not lista_pacientes:
             return (False, "Nenhum paciente encontrado para exportar.")
@@ -844,4 +842,3 @@ def exportar_para_json(_conexao: oracledb.Connection, _colunas: list, _nome_arqu
 
     except Exception as e:
         return (False, e)
-
