@@ -798,7 +798,7 @@ while conectado:
                                     continuar = False
                                     continue
 
-                                veiculos = buscar_todos_veiculos_como_dicionario(conn, colunas_dict, numero_colunas_veiculo_id)
+                                veiculos = buscar_veiculo_por_id(conn, colunas_dict, _numeros_colunas=numero_colunas_veiculo_id, _id_veiculo=id_escolhido)
 
                                 if veiculos:
                                     limpar_terminal()
