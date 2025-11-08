@@ -1,5 +1,6 @@
 from cadastro_paciente import *
 
+'''
 limpar_terminal()
 
 user = "rm561833"
@@ -550,3 +551,56 @@ Digite 'A' para selecionar todas ou '0' para finalizar a seleção.
                     print("\nOperação cancelada pelo usuário.\n")
 
             input("\nPressione ENTER para continuar...")
+
+'''
+'''
+limpar_terminal()
+turnos = {
+    1: "Dia",
+    2: "Tarde",
+    3: "Noite"
+}
+
+msg_turnos = """Turnos:
+1 - Dia
+2 - Tarde
+3 - Noite
+'A' para selecionar todas as opções
+Entrada: """
+
+
+resultado_str, resultado_lista = obter_multiplas_opcoes_dict(msg_turnos,"Entrada inválida. Digite números separados por vírgula.", turnos)
+
+print("String retornada:", resultado_str)
+print("Lista retornada:", resultado_lista)
+'''
+
+
+'''
+status
+realizada
+absenteismo
+cancelada
+
+
+especialidade
+cardiologia
+neurologia
+ortopedia
+dermatologia
+pediatria
+oftalmologia
+clinico geral
+
+tipo consulta
+
+retorno
+emergencia
+"rotina
+exame
+geral
+'''
+limpar_terminal()
+sucesso, dados = solicitar_dados_paciente()
+
+imprimir_pacientes_tabulate(dados)

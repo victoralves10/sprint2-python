@@ -1,22 +1,15 @@
-import os
-import re
-import json
-from datetime import datetime, date
-
-import oracledb
-import requests
-from tabulate import tabulate
-
 # ==========================================================
 #   INSTRUÇÕES PARA EXECUTAR O PROGRAMA
 # ==========================================================
-# Execute o comando SQL abaixo no 'Oracle SQL Developer' para criar as tabelas necessárias.
-# Instale as bibliotecas exigidas no terminal:
-    # pip install oracledb
-    # pip install tabulate
-    # pip install requests
+# 1  -   Execute o comando SQL abaixo no 'Oracle SQL Developer' para criar as tabelas necessárias.
+# 2  -   Instale as bibliotecas exigidas no terminal:
+#         pip install oracledb
+#         pip install tabulate
+#         pip install requests
+#         pip install pandas
 
-# COMANDO SQL PARA ORACLE
+# COMANDO SQL PARA ORACLE:
+
 """
 -- Tabela de Pacientes
 CREATE TABLE T_PACIENTE (
@@ -42,15 +35,34 @@ CREATE TABLE T_PACIENTE (
     DT_HORA_CONSULTA   TIMESTAMP,
     TIPO_CONSULTA      VARCHAR2(20),
     ESPECIALIDADE      VARCHAR2(50),
-    STATUS_CONSULTA    VARCHAR2(20)
-);
+    STATUS_CONSULTA    VARCHAR2(20),
 
+    -- Controle de registro
+    DT_CADASTRO        DATE DEFAULT SYSDATE,
+    DT_ULTIMA_ATUALIZACAO DATE
+);
 """
+
+# Este programa utiliza a API pública do ViaCEP para consultar informações de endereços
+# a partir do CEP informado pelo usuário.
+# A API retorna dados como: Logradouro, Bairro, Cidade, Estado e outros dados relacionados ao CEP.
+
 # Após isso, o código estará pronto para ser executado.
 
 # Execute o programa pelo arquivo principal: main.py
 # (no terminal: python main.py)
 
+# --- Bibliotecas padrão ---
+import os
+import re
+import json
+from datetime import datetime, date
+
+# --- Pacotes externos ---
+import oracledb
+import requests
+import pandas as pd
+from tabulate import tabulate
 
 # ==========================================================
 #   SUBALGORITMOS
@@ -80,151 +92,307 @@ def imprimir_linha_separadora(simbolo: str, quantidade: int) -> None:
 #   VALIDAÇÃO DE DADOS (TIPOS BÁSICOS)
 # ==========================================================
 
-def obter_int(_msg: str = None) -> int:
-    """Obtém um número inteiro digitado pelo usuário, com mensagem opcional."""
-    _msg = _msg or ""
+def obter_int(_msg_input: str, _msg_erro: str) -> int:
+    """Obtém um número inteiro digitado pelo usuário, exibindo uma mensagem de erro personalizada."""
     entrada_int = None
     while entrada_int is None:
         try:
-            entrada_int = int(input(_msg).strip())
+            entrada_int = int(input(_msg_input).strip())
         except ValueError:
+            print(f"{_msg_erro}\n") # Exemplo: Entrada inválida. Por favor, digite um número inteiro.
             entrada_int = None
     return entrada_int
 
-def obter_float(_msg: str = None) -> float:
-    """Obtém um número float digitado pelo usuário, com mensagem opcional."""
-    _msg = _msg or ""
+def obter_float(_msg_input: str, _msg_erro: str) -> float:
+    """Obtém um número float digitado pelo usuário, exibindo uma mensagem de erro personalizada."""
     entrada_float = None
     while entrada_float is None:
         try:
-            entrada_float = float(input(_msg).strip())
+            valor = float(input(_msg_input).strip().replace(',', '.'))  # aceita vírgula ou ponto
+            entrada_float = float(valor)
         except ValueError:
+            print(f"{_msg_erro}\n")  # Exemplo: "Entrada inválida. Por favor, digite um número decimal."
             entrada_float = None
     return entrada_float
 
-def obter_data(_msg: str = None) -> datetime:
-    """Obtém um uma data digitado pelo usuário, com mensagem opcional. ex 00/00/0000"""
-    _msg = _msg or ""
+def obter_texto(_msg_input: str, _msg_erro: str) -> str:
+    """Obtém um texto digitado pelo usuário, garantindo que não esteja vazio e exibindo uma mensagem de erro personalizada."""
+    entrada_texto = ""
+    
+    while not entrada_texto:
+        entrada_texto = input(_msg_input).strip()
+        if not entrada_texto:
+            print(f"{_msg_erro}\n") # Entrada inválida. O campo não pode ficar vazio.
+    
+    return entrada_texto
+
+def obter_data(_msg_input: str, _msg_erro: str) -> str:
+    """Obtém uma data digitada pelo usuário (formato DD/MM/AAAA), exibindo uma mensagem de erro personalizada."""
     data = None
     while data is None:
-        data_str = str(input(_msg)).strip()
+        data_str = input(_msg_input).strip()
         if not data_str:
+            print(f"{_msg_erro}\n")
             continue
         try:
             data = datetime.strptime(data_str, "%d/%m/%Y")
-        except Exception:
+        except ValueError:
+            print(f"{_msg_erro}\n")  # Exemplo: "Data inválida. Use o formato DD/MM/AAAA."
             data = None
     return data.strftime("%d/%m/%Y")
 
-def obter_sim_nao(_msg: str = None) -> bool:
-    """Pergunta ao usuário uma questão de Sim/Não e retorna True para 'S' ou False para 'N', com mensagem personalizável."""
-    _msg = _msg or ""
+def obter_data_hora(_msg_input: str, _msg_erro: str) -> str:
+    """Obtém uma data e hora digitada pelo usuário no formato 'dd/mm/aaaa hh:mm',
+    exibindo uma mensagem de erro personalizada."""
+    
+    data = None
+
+    while data is None:
+        data_str = input(_msg_input).strip()
+        
+        if not data_str:
+            print(f"{_msg_erro}\n")
+
+        else:
+            try:
+                data = datetime.strptime(data_str, "%d/%m/%Y %H:%M")
+            except ValueError:
+                print(f"{_msg_erro}\n") # Formato inválido! Use dd/mm/aaaa hh:mm, por exemplo: 15/11/2025 14:30.
+                data = None
+
+    return data.strftime("%d/%m/%Y %H:%M")
+
+def obter_sim_nao(_msg_input: str, _msg_erro: str) -> bool:
+    """Pergunta ao usuário uma questão de Sim/Não e retorna True para 'S' ou False para 'N',
+    aceitando também 'sim' e 'não', com mensagem personalizável."""
+    
     entrada_sim_nao = ""
     resultado = False
+
     while entrada_sim_nao not in ["S", "N"]:
-        entrada_sim_nao = str(input(_msg)).strip().upper()
+        entrada_sim_nao = input(_msg_input).strip().upper()
+
         if not entrada_sim_nao:
-            continue
-        if entrada_sim_nao[0] == "S":
-            resultado = True
-        elif entrada_sim_nao[0] == "N":
-            resultado = False
+            print(f"{_msg_erro}\n")
+            entrada_sim_nao = ""
+
+        else:
+            if entrada_sim_nao[0] == "S":
+                resultado = True
+                entrada_sim_nao = "S"
+
+            elif entrada_sim_nao[0] == "N":
+                resultado = False
+                entrada_sim_nao = "N"
+
+            else:
+                print(f"{_msg_erro}\n")
+                entrada_sim_nao = ""
+
     return resultado
 
-def obter_int_invervalado(_msg: str, _min: int, _max: int) -> int:
+def obter_int_intervalado(_msg_input: str, _msg_erro: str, _min: int, _max: int) -> int:
     """Solicita ao usuário um número inteiro entre os valores mínimos e máximos informados, com mensagem personalizável."""
+
     entrada_valida = False
+    entrada_numero = None
+
     while not entrada_valida:
-        entrada_numero = obter_int(_msg)
-        if _min <= entrada_numero <= _max:
-            entrada_valida = True
-        else:
-            continue
+        try:
+            entrada_numero = int(input(_msg_input).strip())
+
+            if _min <= entrada_numero <= _max:
+                entrada_valida = True
+
+            else:
+                print(f"{_msg_erro}. Digite entre {_min} e {_max}.\n")  # Entrada inválida.
+
+        except ValueError:
+            print(f"{_msg_erro}. Digite entre {_min} e {_max}.\n")
+
     return entrada_numero
+
+def obter_opcao_dict(_msg_input: str, _msg_erro: str, _opcoes_dict: dict) -> str:
+    """Exibe um dicionário numerado de opções e solicita ao usuário que escolha um número válido."""
+
+    minimo = min(_opcoes_dict.keys())
+    maximo = max(_opcoes_dict.keys())
+
+    escolha = obter_int_intervalado(_msg_input, _msg_erro, minimo, maximo)
+
+    return _opcoes_dict[escolha]
+
+def obter_multiplas_opcoes_dict(_msg_input: str, _msg_erro: str, _opcoes_dict: dict) -> tuple[str, list]:
+    """Solicita ao usuário uma ou mais opções numéricas (separadas por vírgula) com base em um dicionário numerado.
+    Aceita também 'A' para selecionar todas as opções.
+    Retorna uma tupla contendo: (string_formatada, lista_de_valores)."""
+
+    valores_str = ""
+    valores_lista = []
+    entrada_valida = False
+
+    while not entrada_valida:
+        entrada = input(_msg_input).strip().upper()
+
+        # Se o usuário apertar Enter ou deixar em branco
+        if not entrada:
+            print(f"{_msg_erro}\n")
+            continue
+
+        # Se digitar 'A', seleciona todas as opções automaticamente
+        if entrada == "A":
+            valores_lista = []
+            for chave in _opcoes_dict:
+                valores_lista.append(_opcoes_dict[chave])
+            valores_str = ", ".join(valores_lista)
+            entrada_valida = True
+            continue
+
+        try:
+            # Divide a entrada e converte para inteiros
+            numeros = []
+            partes = entrada.split(",")
+            for parte in partes:
+                parte = parte.strip()
+                if parte:
+                    numeros.append(int(parte))
+
+            # Se não houver números válidos
+            if not numeros:
+                print(f"{_msg_erro}\n")
+                continue
+
+            # Verifica se todos os números existem no dicionário
+            todos_validos = True
+            for n in numeros:
+                if n not in _opcoes_dict:
+                    todos_validos = False
+                    break
+
+            if todos_validos:
+                valores_lista = []
+                for n in numeros:
+                    valores_lista.append(_opcoes_dict[n])
+
+                valores_str = ", ".join(valores_lista)
+                entrada_valida = True
+            else:
+                print(f"{_msg_erro}\n")
+
+        except ValueError:
+            print(f"{_msg_erro}\n")
+
+    return valores_str, valores_lista
 
 # ==========================================================
 #   VALIDAÇÃO DE DADOS PARA CADASTRO (PACIENTE)
 # ==========================================================
 
-def obter_nome(_msg: str = None) -> str:
-    """Solicita ao usuário um nome (ou texto) e garante que o campo não fique vazio, com mensagem personalizável."""
-    _msg = _msg or ""
-    entrada_str = ""
-    while not entrada_str:
-        entrada_str = str(input(_msg)).strip()
-    return entrada_str
+def obter_email(_msg_input: str, _msg_erro: str) -> str:
+    """Solicita um e-mail válido usando regex, exibindo mensagem de erro personalizada."""
+    email = ""
+    padrao = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    
+    while not re.match(padrao, email):
+        email = input(_msg_input).strip()
+        if not re.match(padrao, email):
+            print(f"{_msg_erro}\n")
+            email = ""
+    return email
 
-def obter_sexo(_msg: str = None) -> str:
-    """Solicita ao usuário o sexo e retorna 'M' para masculino ou 'F' para feminino, com mensagem personalizável."""
-    _msg = _msg or ""
-    sexo = ""
-    resultado = ""
-    while sexo not in ['M', 'F']:
-        sexo = input(_msg).strip().upper()
-        if not sexo:
-            continue
-        if sexo[0] == 'M':
-            resultado = 'M'
-        elif sexo[0] == 'F':
-            resultado = 'F'
-    return resultado
+def obter_m_f(_msg_input: str, _msg_erro: str) -> str:
+    """Pergunta ao usuário o sexo ('M' ou 'F'), aceitando também palavras completas ('Masculino', 'Feminino'),
+    e exibindo uma mensagem de erro personalizada em caso de entrada inválida."""
+    
+    entrada_mf = ""
 
-def obter_cpf(_msg: str = None) -> str:
-    """Solicita ao usuário um CPF no formato numérico (11 dígitos) e valida a entrada, com mensagem personalizável. ex 12345678901"""
-    _msg = _msg or ""
+    while entrada_mf not in ["M", "F"]:
+        entrada_mf = input(_msg_input).strip().upper()
+
+        if not entrada_mf:
+            print(f"{_msg_erro}\n") 
+            entrada_mf = ""
+
+        else:
+            if entrada_mf[0] == "M":
+                entrada_mf = "M"
+
+            elif entrada_mf[0] == "F":
+                entrada_mf = "F"
+
+            else:
+                print(f"{_msg_erro}\n") # Entrada inválida. Digite 'M' para Masculino ou 'F' para Feminino.
+                entrada_mf = ""
+
+    return entrada_mf
+
+def obter_cpf(_msg_input: str, _msg_erro: str) -> str:
+    """Solicita ao usuário um CPF no formato numérico (11 dígitos), aceitando também formatos com pontos e traço,
+    exibindo uma mensagem de erro personalizada em caso de entrada inválida.
+    Exemplo aceito: 555.555.555-20 ou 55555555520."""
+    
     cpf = ""
+
     while not (cpf.isdigit() and len(cpf) == 11):
-        cpf = input(_msg).strip()
+        entrada = input(_msg_input).strip()
+        cpf = entrada.replace(".", "").replace("-", "").replace(" ", "")
+        
+        if not (cpf.isdigit() and len(cpf) == 11):
+            print(f"{_msg_erro}\n") # Entrada inválida. Digite um CPF com 11 números.
+            cpf = ""
+
     return cpf
 
-def obter_rg(_msg: str = None) -> str:
-    """Obtém um número de RG (somente números, 9 dígitos) com mensagem personalizável. ex 123456789"""
-    _msg = _msg or ""
+def obter_rg(_msg_input: str, _msg_erro: str) -> str:
+    """Solicita ao usuário um número de RG (somente números, 9 dígitos), 
+    aceitando também formatos com pontos e traços, e exibindo uma mensagem de erro personalizada.
+    Exemplo aceito: 12.345.678-9 ou 123456789."""
+    
     rg = ""
+
     while not (rg.isdigit() and len(rg) == 9):
-        rg = str(input(_msg).strip())
+        entrada = input(_msg_input).strip()
+        rg = entrada.replace(".", "").replace("-", "").replace(" ", "")
+
+        if not (rg.isdigit() and len(rg) == 9):
+            print(f"{_msg_erro}\n")
+            rg = "" # Entrada inválida. Digite um RG com 9 números.
+
     return rg
 
-def obter_estado_civil(_msg: str = None) -> str:
-    """Retorna o estado civil escolhido pelo usuário; recebe o menu numerado por parâmetro"""
-    _msg = _msg or ""
-    opcoes_estado_civil = {
-        1: "solteiro",
-        2: "casado",
-        3: "divorciado",
-        4: "viuvo"
-    }
-
-    escolha = ""
-    while escolha not in opcoes_estado_civil:
-        escolha = obter_int(_msg)
-
-    return opcoes_estado_civil[escolha]
-
-def obter_endereco(_msg: str = None) -> dict:
-    """Consulta a API ViaCEP com o CEP informado e retorna o endereço completo, com mensagem personalizável. ex 12345678.
-    API pública ViaCEP (https://viacep.com.br)."""
-    _msg = _msg or ": "
+def obter_endereco(_msg_input: str, _msg_erro: str) -> dict:
+    """Consulta a API ViaCEP com o CEP informado e retorna o endereço completo.
+    Aceita CEP com ou sem traço, exibe mensagem de erro personalizada.
+    API pública: https://viacep.com.br
+    """
+    
     endereco = None
 
-    while not endereco:
-        cep = input(_msg).strip().replace("-", "")
-        if len(cep) != 8 or not cep.isdigit():
+    while endereco is None:
+        cep = input(_msg_input).strip().replace("-", "").replace(".", "").replace(" ", "")
+
+        if not (cep.isdigit() and len(cep) == 8):
+            print(f"{_msg_erro}\n")
             continue
 
         try:
             response = requests.get(f"https://viacep.com.br/ws/{cep}/json/")
             data = response.json()
+
             if "erro" in data:
-                continue
-            endereco = {
-                "cep": data.get("cep", ""),
-                "logradouro": data.get("logradouro", ""),
-                "bairro": data.get("bairro", ""),
-                "cidade": data.get("localidade", ""),
-                "estado": data.get("uf", "")
-            }
+                print(f"{_msg_erro}\n") # CEP inválido ou não encontrado. Tente novamente.
+                endereco = None
+            else:
+                endereco = {
+                    "cep": data.get("cep", ""),
+                    "logradouro": data.get("logradouro", ""),
+                    "bairro": data.get("bairro", ""),
+                    "cidade": data.get("localidade", ""),
+                    "estado": data.get("uf", "")
+                }
+
         except Exception:
+            print(f"{_msg_erro}\n")
             endereco = None
 
     return endereco
@@ -249,159 +417,82 @@ def obter_estado(_endereco: dict) -> str:
     """Retorna o estado do endereço obtido pela função obter_endereco()."""
     return _endereco.get("estado", "")
 
-def obter_telefone(_msg: str = None) -> str:
-    """Valida o telefone usando regex, garantindo 11 dígitos numéricos, com mensagem personalizável. ex 10123456789"""
-    _msg = _msg or ""
-    telefone = ""
-    padrao = re.compile(r"^\d{11}$")
-
-    while not padrao.match(telefone):
-        telefone = str(input(_msg)).strip().replace(" ", "").replace("-", "")
-    return telefone
-
-
-def obter_email(_msg: str = None) -> str:
-    """Valida e retorna um e-mail usando regex, garantindo formato correto (ex: nome@dominio.com)."""
-    _msg = _msg or ""
-    padrao = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-    email = ""
-
-    while not padrao.match(email):
-        email = input(_msg).strip().lower()
-    return email
-
-# ==========================================================
-#   VALIDAÇÃO DE DADOS PARA CADASTRO (CONSULTA)
-# ==========================================================
-
-def obter_data_consulta(_msg: str = None) -> datetime:
-    """Obtém a data e hora da consulta no formato dd/mm/aaaa hh:mm."""
-    _msg = _msg or ""
-    data = None
-    while data is None:
-        data_str = str(input(_msg)).strip()
-        if not data_str:
-            continue
-        try:
-            data = datetime.strptime(data_str, "%d/%m/%Y %H:%M")
-        except Exception:
-            data = None
-    return data.strftime("%d/%m/%Y %H:%M")
-
-def obter_tipo_consulta(_msg: str = None) -> str:
-    """Retorna o tipo de consulta escolhido pelo usuário; recebe o menu numerado por parâmetro, se desejado."""
-    _msg = _msg or ""
-    opcoes_tipo_consulta = {
-        1: "retorno",
-        2: "emergencia",
-        3: "rotina",
-        4: "exame",
-        5: "geral",
-    }
-
-    escolha = ""
-    while escolha not in opcoes_tipo_consulta:
-        escolha = obter_int(_msg)
-
-    return opcoes_tipo_consulta[escolha]
-
-def obter_especialidade(_msg: str = None) -> str:
-    """Retorna a especialidade médica escolhida pelo usuário; recebe o menu numerado por parâmetro, se desejado."""
-    _msg = _msg or ""
-    opcoes_especialidade = {
-        1: "cardiologia",
-        2: "neurologia",
-        3: "ortopedia",
-        4: "dermatologia",
-        5: "pediatria",
-        6: "oftalmologia",
-        7: "clinico geral",
-    }
-
-    escolha = ""
-    while escolha not in opcoes_especialidade:
-        escolha = obter_int(_msg)
-
-    return opcoes_especialidade[escolha]
-
-def obter_status_consulta(_msg: str = None) -> str:
-    """Retorna o status da consulta escolhido pelo usuário; recebe o menu numerado por parâmetro, se desejado."""
-    _msg = _msg or ""
-    opcoes_status_consulta = {
-        1: "realizada",
-        2: "cancelada",
-        3: "absenteismo"
-    }
-
-    escolha = ""
-    while escolha not in opcoes_status_consulta:
-        escolha = obter_int(_msg)
-
-    return opcoes_status_consulta[escolha]
-
 # ==========================================================
 #   SOLICITAÇÃO DE DADOS T_PACIENTE
 # ==========================================================
 
-def solicitar_dados_paciente() -> dict:
-    """Solicita e retorna todos os dados do paciente e da consulta em formato de dicionário."""
+def solicitar_dados_paciente() -> tuple[bool, dict]:
+    """Solicita e retorna todos os dados do paciente e da consulta.
+       Retorna uma tupla: (sucesso: bool, dados: dict)
+    """
+    try:
+        # ========= DADOS DO PACIENTE =========
+        nome_completo = obter_texto("Nome do paciente: ", "Nome inválido!")
+        imprimir_linha_separadora("=-", 20)
 
-    # ========= DADOS DO PACIENTE =========
-    nome_completo = obter_nome("Nome do paciente: ")
-    imprimir_linha_separadora("=-", 20)
+        data_nascimento = obter_data("Data de nascimento (dd/mm/aaaa): ", "Data inválida!")
+        imprimir_linha_separadora("=-", 20)
 
-    data_nascimento = obter_data("Data de nascimento (dd/mm/aaaa): ")
-    imprimir_linha_separadora("=-", 20)
+        sexo = obter_m_f("Sexo [M/F]: ", "Entrada inválida! Digite M ou F.")
+        imprimir_linha_separadora("=-", 20)
 
-    sexo = obter_sexo("Sexo [M/F]: ")
-    imprimir_linha_separadora("=-", 20)
+        cpf = obter_cpf("CPF (somente números, ex: 12345678901): ", "CPF inválido!")
+        imprimir_linha_separadora("=-", 20)
 
-    cpf = obter_cpf("CPF (somente números, ex: 12345678901): ")
-    imprimir_linha_separadora("=-", 20)
+        rg = obter_rg("RG (somente números, ex: 123456789): ", "RG inválido!")
+        imprimir_linha_separadora("=-", 20)
 
-    rg = obter_rg("RG (somente números, ex: 123456789): ")
-    imprimir_linha_separadora("=-", 20)
-
-    estado_civil = obter_estado_civil("""Estado civil
+        estado_civil_dict = {1: "Solteiro", 2: "Casado", 3: "Divorciado", 4: "Viuvo"}
+        estado_civil = obter_opcao_dict("""Estado civil
 1 - Solteiro
 2 - Casado
 3 - Divorciado
 4 - Viuvo
-Escolha: """)
-    imprimir_linha_separadora("=-", 20)
+Escolha: """, "Opção inválida!", estado_civil_dict)
+        imprimir_linha_separadora("=-", 20)
 
-    brasileiro = obter_sim_nao("É brasileiro? [S/N]: ")
-    imprimir_linha_separadora("=-", 20)
+        brasileiro = obter_sim_nao("É brasileiro? [S/N]: ", "Entrada inválida!")
+        imprimir_linha_separadora("=-", 20)
 
-    endereco = obter_endereco("CEP (ex: 01310200): ")
-    imprimir_linha_separadora("=-", 20)
+        endereco = obter_endereco("CEP (ex: 01310200): ", "CEP inválido!")
+        imprimir_linha_separadora("=-", 20)
 
-    numero_endereco = obter_int("Número da residência (ex: 123): ")
-    imprimir_linha_separadora("=-", 20)
+        numero_endereco = obter_int("Número da residência (ex: 123): ", "Número inválido!")
+        imprimir_linha_separadora("=-", 20)
 
-    celular = obter_telefone("Celular (DDD + número — ex: 11987654321): ")
-    imprimir_linha_separadora("=-", 20)
+        celular = obter_texto("Celular (DDD + número — ex: 11987654321): ", "Número inválido!")
+        imprimir_linha_separadora("=-", 20)
 
-    email = obter_email("Informe o e-mail (exemplo: exemplo@email.com)\nE-mail: ")
-    imprimir_linha_separadora("=-", 20)
+        email = obter_email("Informe o e-mail (exemplo: exemplo@email.com)\nE-mail: ", "E-mail inválido!")
+        imprimir_linha_separadora("=-", 20)
 
-    convenio = obter_sim_nao("Possui convênio/plano de saúde? [S/N]: ")
-    imprimir_linha_separadora("=-", 20)
+        convenio = obter_sim_nao("Possui convênio/plano de saúde? [S/N]: ", "Entrada inválida!")
+        imprimir_linha_separadora("=-", 20)
 
-    # ========= DADOS DA CONSULTA =========
-    data_hora_consulta = obter_data_consulta("Digite a data e hora da consulta (exemplo: 25/10/2025 14:30)\nData e Hora: ")
-    imprimir_linha_separadora("=-", 20)
+        # ========= DADOS DA CONSULTA =========
+        data_hora_consulta = obter_data_hora("Digite a data e hora da consulta (ex: 25/10/2025 14:30): ", "Data e hora inválida!")
+        imprimir_linha_separadora("=-", 20)
 
-    tipo_consulta = obter_tipo_consulta("""Tipo de consulta
+        tipo_consulta_dict = {1: "Retorno", 2: "Emergencia", 3: "Rotina", 4: "Exame", 5: "Geral"}
+        tipo_consulta = obter_opcao_dict("""Tipo de consulta
 1 - Retorno
 2 - Emergencia
 3 - Rotina
 4 - Exame
 5 - Geral
-Escolha: """)
-    imprimir_linha_separadora("=-", 20)
+Escolha: """, "Opção inválida!", tipo_consulta_dict)
+        imprimir_linha_separadora("=-", 20)
 
-    especialidade = obter_especialidade("""Especialidade
+        especialidade_dict = {
+            1: "Cardiologia",
+            2: "Neurologia",
+            3: "Ortopedia",
+            4: "Dermatologia",
+            5: "Pediatria",
+            6: "Oftalmologia",
+            7: "Clínico Geral"
+        }
+        especialidade = obter_opcao_dict("""Especialidade
 1 - Cardiologia
 2 - Neurologia
 3 - Ortopedia
@@ -409,126 +500,129 @@ Escolha: """)
 5 - Pediatria
 6 - Oftalmologia
 7 - Clínico Geral
-Escolha: """)
-    imprimir_linha_separadora("=-", 20)
+Escolha: """, "Opção inválida!", especialidade_dict)
+        imprimir_linha_separadora("=-", 20)
 
-    status_consulta = obter_status_consulta("""Status da consulta
+        status_consulta_dict = {1: "Realizada", 2: "Cancelada", 3: "Absenteísmo"}
+        status_consulta = obter_opcao_dict("""Status da consulta
 1 - Realizada
 2 - Cancelada
 3 - Absenteísmo
-Escolha: """)
+Escolha: """, "Opção inválida!", status_consulta_dict)
 
-    # ========= RETORNO =========
-    return {
-        # Dados do paciente
-        "nome_completo": nome_completo,
-        "data_nascimento": data_nascimento,
-        "sexo": sexo,
-        "cpf": cpf[:11],
-        "rg": rg[:9],
-        "estado_civil": estado_civil[:20],
-        "brasileiro": "S" if brasileiro else "N",
-        "cep": obter_cep(endereco).replace("-", ""), # remove hífen
-        "rua": obter_rua(endereco)[:100],
-        "bairro": obter_bairro(endereco)[:50],
-        "cidade": obter_cidade(endereco)[:50],
-        "estado": obter_estado(endereco)[:2],
-        "numero_endereco": numero_endereco,
-        "celular": celular[:11],
-        "email": email[:100],
-        "convenio": "S" if convenio else "N",
-        # Dados da consulta
-        "data_hora_consulta": data_hora_consulta,
-        "tipo_consulta": tipo_consulta[:20],
-        "especialidade": especialidade[:50],
-        "status_consulta": status_consulta[:20]
-    }
+        # ========= RETORNO =========
+        dados = {
+            "nome_completo": nome_completo,
+            "data_nascimento": data_nascimento,
+            "sexo": sexo,
+            "cpf": cpf[:11],
+            "rg": rg[:9],
+            "estado_civil": estado_civil[:20],
+            "brasileiro": "S" if brasileiro else "N",
+            "cep": obter_cep(endereco).replace("-", ""),
+            "rua": obter_rua(endereco)[:100],
+            "bairro": obter_bairro(endereco)[:50],
+            "cidade": obter_cidade(endereco)[:50],
+            "estado": obter_estado(endereco)[:2],
+            "numero_endereco": numero_endereco,
+            "celular": celular[:11],
+            "email": email[:100],
+            "convenio": "S" if convenio else "N",
+            "data_hora_consulta": data_hora_consulta,
+            "tipo_consulta": tipo_consulta[:20],
+            "especialidade": especialidade[:50],
+            "status_consulta": status_consulta[:20]
+        }
+
+        retorno = True, dados
+
+    except Exception as e:
+        print(f"Erro ao solicitar dados: {e}")
+        retorno = False, {}
+
+    return retorno
 
 # ==========================================================
-#   SOLICITAÇÃO DE COLUNAS DA TABELA PACIENTE
+#   FORMATAÇÃO DE VALORES
 # ==========================================================
-
-def solicita_campos(colunas: dict, _numeros: list) -> str:
-    """Retorna os nomes das colunas selecionadas a partir dos números informados."""
-    nomes = []
-    for i in _numeros:
-        if i in colunas:
-            nomes.append(colunas[i])
-    return ", ".join(nomes)
-
-def menu_selecao_colunas(colunas: dict, _msg, _titulo) -> list:
-    """Exibe um menu para o usuário selecionar colunas, permite escolher todas ('A') ou sair ('0').
-    _titulo é para a função exibir_titulo_centralizado
-    _msg é para a mensagem do ménu
-    colunas é as colunas para exibir
+def formatar_valor(valor, largura_max: int = 20) -> str:
     """
+    Formata um valor para exibição em tabela, quebrando linhas longas e tratando datas.
 
-    selecionadas = []
-    entrada = ""
+    Args:
+        valor: valor a ser formatado (str, int, float, datetime, date, None)
+        largura_max: largura máxima da célula antes de quebrar linha
 
-    while entrada != "0":
-        limpar_terminal()
-
-        
-        exibir_titulo_centralizado(_titulo, 60)
-        print(_msg)
-
-        entrada = input("Digite o número da coluna: ").strip().upper()
-
-        if entrada == "0":
-            break
-        elif entrada == "A":
-            selecionadas = list(colunas.keys())
-            break
-        elif entrada.isdigit():
-            num = int(entrada)
-            if num in colunas and num not in selecionadas:
-                selecionadas.append(num)
-
-    return selecionadas
+    Returns:
+        str formatado
+    """
+    if valor is None:
+        return ""
+    elif isinstance(valor, datetime):
+        if valor.time() == datetime.min.time():
+            return valor.strftime("%d/%m/%Y")
+        else:
+            return valor.strftime("%d/%m/%Y %H:%M")
+    elif isinstance(valor, date):
+        return valor.strftime("%d/%m/%Y")
+    else:
+        texto = str(valor)
+        linhas = []
+        for i in range(0, len(texto), largura_max):
+            linhas.append(texto[i:i+largura_max])
+        return "\n".join(linhas)
 
 # ==========================================================
-#   VISUALIZAÇÃO DE DADOS (TABULATE)
+#   IMPRESSÃO DE RESULTADOS ORACLE
 # ==========================================================
 
-def imprimir_pacientes_tabulate(lista_de_pacientes: list, largura_max: int = 20) -> None:
-    """Imprime pacientes em formato de tabela formatada."""
-    lista_formatada = []
+def imprimir_resultado_oracle(resultado_cursor, largura_max: int = 20) -> tuple[bool, str]:
+    """
+    Recebe o resultado de um SELECT do Oracle (cursor) e retorna a tabela formatada.
 
-    for paciente in lista_de_pacientes:
-        registro = {}
+    Args:
+        resultado_cursor: cursor do Oracle ou lista de tuplas/dicionários
+        largura_max: largura máxima das células antes de quebrar linha
 
-        for k, v in paciente.items():
-            if v is None:
-                registro[k] = ""
+    Returns:
+        tuple: (sucesso: bool, tabela_ou_mensagem: str)
+    """
+    try:
+        # Se não houver resultados
+        if not resultado_cursor:
+            return False, "Nenhum registro encontrado."
 
-            elif isinstance(v, datetime):
-                if v.time() == datetime.min.time():
-                    registro[k] = v.strftime("%d/%m/%Y")
-                else:
-                    registro[k] = v.strftime("%d/%m/%Y %H:%M")
-
-            elif isinstance(v, date):
-                registro[k] = v.strftime("%d/%m/%Y")
-
+        # Se for cursor, pegar colunas e dados
+        if hasattr(resultado_cursor, "description"):
+            headers = [col[0] for col in resultado_cursor.description]
+            dados = resultado_cursor.fetchall()
+        else:
+            # Se for lista de tuplas (já fetchall)
+            dados = resultado_cursor
+            if len(dados) > 0 and isinstance(dados[0], dict):
+                headers = list(dados[0].keys())
             else:
-                texto = str(v)
-                linhas = []
-                for i in range(0, len(texto), largura_max):
-                    linhas.append(texto[i:i+largura_max])
-                registro[k] = "\n".join(linhas)
+                headers = [f"Col{i+1}" for i in range(len(dados[0]))]
 
-        lista_formatada.append(registro)
+        # Transformar em DataFrame para aplicar formatação
+        df = pd.DataFrame(dados, columns=headers)
 
-    print(
-        tabulate(
-            lista_formatada,
+        # Formatar valores
+        for coluna in df.columns:
+            df[coluna] = df[coluna].apply(lambda x: formatar_valor(x, largura_max))
+
+        tabela = tabulate(
+            df.to_dict(orient="records"),
             headers="keys",
             tablefmt="fancy_grid",
             numalign="right",
             stralign="left"
         )
-    )
+
+        return True, tabela
+
+    except Exception as e:
+        return False, f"Erro ao imprimir resultado: {e}"
 
 # ==========================================================
 #   CRUD BANCO DE DADOS

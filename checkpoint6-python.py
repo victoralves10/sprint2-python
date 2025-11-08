@@ -15,6 +15,7 @@ from tabulate import tabulate
     # pip install oracledb
     # pip install tabulate
     # pip install pandas
+    # ou pip install oracledb tabulate pandas
 
 # ==========================================================
 #   COMANDO SQL PARA ORACLE
@@ -49,7 +50,7 @@ END;
 # Após isso, o código estará pronto para ser executado.
 
 # Execute o programa pelo arquivo principal: checkpoint6-python.py
-# (no terminal: checkpoint6-python.py)
+# (no terminal: python checkpoint6-python.py)
 
 # =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
@@ -703,7 +704,7 @@ while conectado:
             sucesso = inserir_novo_veiculo(conn, dados_cadastro)
             if sucesso:
                 print("\nVeículo cadastrado com sucesso!")
-            input("\nPrecione 'ENTER' para voltar...")
+            input("\nPressione 'ENTER' para voltar...")
         
         case 2:
             limpar_terminal()
@@ -711,7 +712,7 @@ while conectado:
 
             if not verifica_tabela(conn):
                 exibir_titulo_centralizado("MENU DE CONSULTA DE VEÍCULOS", 60)
-                print("\nNenhum paciente encontrado.\n")
+                print("\nNenhum veículo encontrado.\n")
                 input("\nPressione ENTER para voltar...")
             else:
                 escolha_submenu = -1
@@ -722,7 +723,7 @@ while conectado:
                     print("1 - Consultar todos os veículos")
                     print("2 - Consultar por ID")
                     print("3 - Consultar por pesquisa de texto")
-                    print("4 - Consultar por pesquisa númerica")
+                    print("4 - Consultar por pesquisa numérica")
                     print("\n0 - Voltar para menu principal\n")
                 
                     escolha_consulta = obter_inteiro_em_intervalo("Escolha: ", 0, 4)
@@ -771,7 +772,7 @@ while conectado:
 
                             continuar = True
                             while continuar:
-                                print("\nDigite '0' para voltar ao menu menu de consultas")
+                                print("\nDigite '0' para voltar ao menu de consultas")
                                 id_escolhido = obter_inteiro("\nDigite o ID do veículo: ")
 
                                 if id_escolhido == 0:
@@ -783,7 +784,7 @@ while conectado:
                                             id_encontrado = True
                                             break
                                     if not id_encontrado:
-                                        print(f"Erro: Nenhum paciente encontrado com ID {id_encontrado}")
+                                        print(f"Erro: Nenhum veículo encontrado com ID {id_escolhido}")
                                     else:
                                         continuar = False
                                 
@@ -823,7 +824,7 @@ while conectado:
                                 6: "STATUS"
                             }
 
-                            print("\nEscolha o coluna textual para buscar:\n")
+                            print("\nEscolha a coluna textual para buscar:\n")
                             for k, v in campos_texto.items():
                                 print(f"{k} - {v}")
                             
@@ -831,7 +832,7 @@ while conectado:
                             campo_where = campos_texto[escolha_campo]
 
                             print()
-                            texto_busca = obter_texto(f"Digite o texto para buscar no campo {campo_where}: ")
+                            texto_busca = obter_texto(f"Digite o texto a ser buscado no campo {campo_where}: ")
 
                             numero_colunas_veiculo_texto = menu_selecao_colunas(colunas_dict, colunas_msg, "CONSULTA DE VEÍCULOS POR PESQUISA DE TEXTO")
 
@@ -850,9 +851,9 @@ while conectado:
                                 print("\nNenhum veículo encontrado.") 
                             input("\nPressione ENTER para voltar para o menu de consultas")
                         
-                        case 4: # 4 - Consultar por pesquisa númerica
+                        case 4: # 4 - Consultar por pesquisa numérica
                             limpar_terminal()       
-                            exibir_titulo_centralizado("CONSULTAR POR PESQUISA DE númerica", 60)
+                            exibir_titulo_centralizado("CONSULTA POR PESQUISA NUMÉRICA", 60)
 
                             campos_numericos = {
                                 1: "ID_VEICULO",
@@ -861,7 +862,7 @@ while conectado:
                                 4: "VALOR_DIARIA"
                             }
 
-                            print("Escolha o Campo númerico para buscar: ")
+                            print("Escolha o campo numérico para buscar: ")
                             for k, v in campos_numericos.items():
                                 print(f"{k} - {v}")
 
@@ -872,7 +873,7 @@ while conectado:
                             valor = obter_inteiro(f"Digite o número para buscar no campo {campo_where}: ")
 
                             limpar_terminal()
-                            exibir_titulo_centralizado("CONSULTAR POR PESQUISA DE númerica", 60)
+                            exibir_titulo_centralizado("CONSULTAR POR PESQUISA NUMÉRICA", 60)
 
                             operadores = {1: "=", 2: ">", 3: "<", 4: ">=", 5: "<=", 6: "<>"}
 
@@ -882,7 +883,7 @@ while conectado:
                             print("3. Menor (<)")
                             print("4. Maior ou igual (>=)")
                             print("5. Menor ou igual (<=)")
-                            print("6. Diferente (!=)\n")
+                            print("6. Diferente (<>)\n")
 
                             opcao_operador = obter_inteiro_em_intervalo(f"Operador para pesquisar '{valor}': ", 1, 6)
 
@@ -966,7 +967,7 @@ while conectado:
                     input("\nPressione ENTER para voltar ao menu...")
                     break
 
-                print("Escolha o ID do veículo que deseja excluir:")
+                print(":Escolha o ID do veículo que deseja excluir:")
                 imprimir_veiculos_tabulate(veiculos_preview)
                 print("Digite '0' para cancelar")
 
