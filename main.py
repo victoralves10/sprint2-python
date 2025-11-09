@@ -1,561 +1,5 @@
 from cadastro_paciente import *
 
-'''
-limpar_terminal()
-
-user = "rm561833"
-password = "070406"
-dsn = "oracle.fiap.com.br:1521/ORCL"
-
-# Tenta conectar ao banco
-sucesso, resultado = conectar_oracledb(user, password, dsn)
-
-if not sucesso:
-    print("Erro ao conectar ao banco de dados!\n")
-    print("Detalhes:\n", resultado)
-else:
-    conn = resultado  # objeto de conexão
-    conectado = True
-
-# Loop do menu principal
-while conectado:
-    limpar_terminal()
-    exibir_titulo_centralizado("AXCESS TECH - FICHA PACIENTE", 60)
-    print("""
-1. Cadastrar paciente
-2. Consultar registros
-3. Atualizar registros
-4. Remover registros
-5. Limpar todos os registros
-
-0. Sair
-""")
-
-    escolha_menu = obter_int_invervalado("Escolha: ", 0, 5)
-
-    colunas = {
-        1: "ID_PACIENTE",
-        2: "NM_COMPLETO",
-        3: "DT_NASCIMENTO",
-        4: "SEXO",
-        5: "CPF",
-        6: "RG",
-        7: "ESTADO_CIVIL",
-        8: "BRASILEIRO",
-        9: "CEP",
-        10: "RUA",
-        11: "BAIRRO",
-        12: "CIDADE",
-        13: "ESTADO",
-        14: "NUMERO_ENDERECO",
-        15: "CELULAR",
-        16: "EMAIL",
-        17: "CONVENIO",
-        18: "DT_HORA_CONSULTA",
-        19: "TIPO_CONSULTA",
-        20: "ESPECIALIDADE",
-        21: "STATUS_CONSULTA"
-    }
-
-    match escolha_menu:
-        case 0:
-            limpar_terminal()
-            print("\nPrograma encerrado. Até logo!\n")
-            conectado = False
-
-        case 1:
-            limpar_terminal()
-            exibir_titulo_centralizado("FICHA DE CADASTRO", 60)
-            dados_do_registro = solicitar_dados_paciente()
-            sucesso, erro = inserir_paciente(conn, dados_do_registro)
-
-            if sucesso:
-                print("\nPaciente registrado com sucesso!")
-            else:
-                print("\nErro ao registrar paciente!")
-                print(erro)
-
-            input("\nPressione ENTER para continuar...")
-
-        case 2:
-            if not verifica_tabela(conn, "T_PACIENTE"):
-                limpar_terminal()
-                exibir_titulo_centralizado("CONSULTA / LISTA DE PACIENTE", 60)
-                print("\nNenhum paciente encontrado.\n")
-                input("\nPressione ENTER para continuar...")
-            else:
-                escolha_submenu = -1
-                while escolha_submenu != 0:
-                    limpar_terminal()
-                    exibir_titulo_centralizado("CONSULTA / LISTA DE PACIENTE", 60)
-                    print("""
-1. Listar todos os pacientes
-2. Consultar paciente por ID
-3. Pesquisar por texto
-4. Pesquisar por número
-5. Exportar para JSON
-
-0. Voltar ao menu principal
-""")
-                    escolha_submenu = obter_int_invervalado("Escolha: ", 0, 5)
-
-                    match escolha_submenu:
-                        case 0:
-                            break
-
-                        case 1:
-                            limpar_terminal()
-                            exibir_titulo_centralizado("LISTA DE TODOS PACIENTE", 60)
-                            msg = """ SELECIONE OS CAMPOS QUE DESEJA VER
-
-1 - ID_PACIENTE         12 - CIDADE 
-2 - NM_COMPLETO         13 - ESTADO
-3 - DT_NASCIMENTO       14 - NUMERO_ENDERECO
-4 - SEXO                15 - CELULAR
-5 - CPF                 16 - EMAIL
-6 - RG                  17 - CONVENIO
-7 - ESTADO_CIVIL        18 - DT_HORA_CONSULTA
-8 - BRASILEIRO          19 - TIPO_CONSULTA
-9 - CEP                 20 - ESPECIALIDADE
-10 - RUA                21 - STATUS_CONSULTA
-11 - BAIRRO
-
-Digite 'A' para selecionar todas ou '0' para finalizar a seleção.
-"""
-                            numeros_colunas = menu_selecao_colunas(colunas, msg, "LISTA DE TODOS PACIENTE")
-                            if not numeros_colunas:
-                                print("\nNenhuma coluna selecionada. Voltando ao menu...\n")
-                                input("Pressione ENTER para continuar...")
-                                continue
-
-                            pacientes = buscar_todos_pacientes_como_dicionario(conn, colunas, numeros_colunas)
-
-                            if pacientes:
-                                limpar_terminal()
-                                exibir_titulo_centralizado("LISTA DE TODOS PACIENTE", 60)
-                                imprimir_pacientes_tabulate(pacientes)
-                            else:
-                                print("\nNenhum paciente encontrado.\n")
-
-                            input("\nPressione ENTER para continuar...")
-
-                        case 2:
-                            limpar_terminal()
-                            exibir_titulo_centralizado("CONSULTA DE PACIENTE POR ID", 60)
-
-                            preview_colunas = {
-                                1: "ID_PACIENTE",
-                                2: "NM_COMPLETO",
-                                3: "TIPO_CONSULTA",
-                                4: "STATUS_CONSULTA"
-                            }
-                            numeros_preview = [1, 2, 3, 4]
-                            pacientes_preview = buscar_todos_pacientes_como_dicionario(conn, preview_colunas, numeros_preview)
-
-                            if not pacientes_preview:
-                                print("\nNenhum paciente encontrado.\n")
-                                input("\nPressione ENTER para continuar...")
-                                continue
-
-                            print("Lista de pacientes cadastrados (preview):\n")
-                            imprimir_pacientes_tabulate(pacientes_preview)
-
-                            continuar = True
-                            while continuar:
-                                id_escolhido = obter_int("\nDigite o ID do paciente que deseja consultar (0 para voltar): ")
-
-                                if id_escolhido == 0:
-                                    continuar = False
-                                else:
-                                    id_encontrado = False
-                                    for paciente in pacientes_preview:
-                                        if paciente.get("ID_PACIENTE") == id_escolhido:
-                                            id_encontrado = True
-                                            break
-                                    if not id_encontrado:
-                                        print(f"\nErro: nenhum paciente encontrado com ID {id_escolhido}.")
-                                    else:
-                                        continuar = False
-
-                            if id_escolhido == 0:
-                                continue
-
-                            msg_colunas = """ SELECIONE OS CAMPOS QUE DESEJA VER
-                            
-1 - ID_PACIENTE         12 - CIDADE 
-2 - NM_COMPLETO         13 - ESTADO
-3 - DT_NASCIMENTO       14 - NUMERO_ENDERECO
-4 - SEXO                15 - CELULAR
-5 - CPF                 16 - EMAIL
-6 - RG                  17 - CONVENIO
-7 - ESTADO_CIVIL        18 - DT_HORA_CONSULTA
-8 - BRASILEIRO          19 - TIPO_CONSULTA
-9 - CEP                 20 - ESPECIALIDADE
-10 - RUA                21 - STATUS_CONSULTA
-11 - BAIRRO
-
-Digite 'A' para selecionar todas ou '0' para finalizar a seleção.
-"""
-                            colunas_exibir_idx = menu_selecao_colunas(colunas, msg_colunas, "COLUNAS PARA EXIBIÇÃO")
-                            if not colunas_exibir_idx:
-                                print("\nNenhuma coluna selecionada. Voltando ao menu...\n")
-                                input("Pressione ENTER para continuar...")
-                                continue
-
-                            colunas_exibir = [colunas[i] for i in colunas_exibir_idx]
-
-                            cur = conn.cursor()
-                            campos_select = ", ".join(colunas_exibir)
-                            comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE ID_PACIENTE = :id"
-                            cur.execute(comando_sql, {"id": id_escolhido})
-                            resultados = cur.fetchall()
-                            nomes_colunas = [col[0].upper() for col in cur.description]
-                            cur.close()
-
-                            lista_paciente = []
-                            for linha in resultados:
-                                registro = {nomes_colunas[i]: linha[i] for i in range(len(nomes_colunas))}
-                                lista_paciente.append(registro)
-
-                            limpar_terminal()
-                            exibir_titulo_centralizado(f"RESULTADO DA CONSULTA - ID {id_escolhido}", 60)
-                            if lista_paciente:
-                                imprimir_pacientes_tabulate(lista_paciente)
-                            else:
-                                print("\nNenhum paciente encontrado.\n")
-
-                            input("\nPressione ENTER para continuar...")
-
-                        case 3:
-                            limpar_terminal()
-                            exibir_titulo_centralizado("CONSULTA DE PACIENTE POR TEXTO", 100)
-
-                            campos_textuais = {
-                                1: "NM_COMPLETO",
-                                2: "ESTADO_CIVIL",
-                                3: "BAIRRO",
-                                4: "CIDADE",
-                                5: "ESTADO",
-                                6: "CELULAR",
-                                7: "EMAIL",
-                                8: "ESPECIALIDADE",
-                                9: "STATUS_CONSULTA",
-                                10: "TIPO_CONSULTA"
-                            }
-                            print("\nEscolha o campo textual para buscar:")
-                            for k, v in campos_textuais.items():
-                                print(f"{k}. {v}")
-
-                            escolha_campo = obter_int_invervalado("Campo: ", 1, 10)
-                            campo_where = campos_textuais[escolha_campo]
-
-                            texto_busca = input("\nDigite o texto para buscar: ").strip()
-
-                            msg_colunas = """ SELECIONE OS CAMPOS QUE DESEJA VER
-                            
-1 - ID_PACIENTE         12 - CIDADE 
-2 - NM_COMPLETO         13 - ESTADO
-3 - DT_NASCIMENTO       14 - NUMERO_ENDERECO
-4 - SEXO                15 - CELULAR
-5 - CPF                 16 - EMAIL
-6 - RG                  17 - CONVENIO
-7 - ESTADO_CIVIL        18 - DT_HORA_CONSULTA
-8 - BRASILEIRO          19 - TIPO_CONSULTA
-9 - CEP                 20 - ESPECIALIDADE
-10 - RUA                21 - STATUS_CONSULTA
-11 - BAIRRO
-
-Digite 'A' para selecionar todas ou '0' para finalizar a seleção.
-"""
-                            colunas_exibir_idx = menu_selecao_colunas(colunas, msg_colunas, "COLUNAS PARA EXIBIÇÃO")
-                            if not colunas_exibir_idx:
-                                print("\nNenhuma coluna selecionada. Voltando ao menu...\n")
-                                input("Pressione ENTER para continuar...")
-                                continue
-                            
-                            colunas_exibir = [colunas[i] for i in colunas_exibir_idx]
-
-                            pacientes = buscar_paciente_por_texto(conn, campo_where, texto_busca, colunas_exibir)
-
-                            limpar_terminal()
-                            exibir_titulo_centralizado("RESULTADO DA BUSCA", 100)
-                            if pacientes:
-                                imprimir_pacientes_tabulate(pacientes)
-                            else:
-                                print("\nNenhum paciente encontrado.\n")
-
-                            input("\nPressione ENTER para continuar...")
-
-                        case 4:
-                            limpar_terminal()
-                            exibir_titulo_centralizado("CONSULTA DE PACIENTE POR NÚMERO", 60)
-
-                            campos_numericos = {
-                                1: "ID_PACIENTE",
-                                2: "NUMERO_ENDERECO"
-                            }
-                            print("Escolha o campo numérico para buscar:")
-                            for k, v in campos_numericos.items():
-                                print(f"{k}. {v}")
-
-                            escolha_campo = obter_int_invervalado("Campo: ", 1, len(campos_numericos))
-                            campo_where = campos_numericos[escolha_campo]
-
-                            valor = obter_int(f"\nDigite o número para buscar em {campo_where}: ")
-
-                            operadores = {1: "=", 2: ">", 3: "<", 4: ">=", 5: "<=", 6: "!="}
-                            print("\nEscolha o operador:")
-                            for k, v in operadores.items():
-                                print(f"{k} - {v}")
-
-                            opcao_operador = obter_int_invervalado("Operador: ", 1, 6)
-                            operador = operadores[opcao_operador]
-
-                            msg_colunas = """ SELECIONE OS CAMPOS QUE DESEJA VER
-                            
-1 - ID_PACIENTE         12 - CIDADE 
-2 - NM_COMPLETO         13 - ESTADO
-3 - DT_NASCIMENTO       14 - NUMERO_ENDERECO
-4 - SEXO                15 - CELULAR
-5 - CPF                 16 - EMAIL
-6 - RG                  17 - CONVENIO
-7 - ESTADO_CIVIL        18 - DT_HORA_CONSULTA
-8 - BRASILEIRO          19 - TIPO_CONSULTA
-9 - CEP                 20 - ESPECIALIDADE
-10 - RUA                21 - STATUS_CONSULTA
-11 - BAIRRO
-
-Digite 'A' para selecionar todas ou '0' para finalizar a seleção.
-"""
-                            colunas_exibir_idx = menu_selecao_colunas(colunas, msg_colunas, "COLUNAS PARA EXIBIÇÃO")
-                            if not colunas_exibir_idx:
-                                print("\nNenhuma coluna selecionada. Voltando ao menu...\n")
-                                input("Pressione ENTER para continuar...")
-                                continue
-
-                            colunas_exibir = [colunas[i] for i in colunas_exibir_idx]
-
-                            pacientes = buscar_paciente_por_numero(conn, campo_where, operador, valor, colunas_exibir)
-
-                            limpar_terminal()
-                            exibir_titulo_centralizado("RESULTADO DA BUSCA POR NÚMERO", 60)
-                            if pacientes:
-                                imprimir_pacientes_tabulate(pacientes)
-                            else:
-                                print("\nNenhum paciente encontrado.\n")
-
-                            input("\nPressione ENTER para continuar...")
-
-                        case 5:
-                            limpar_terminal()
-                            exibir_titulo_centralizado("EXPORTAÇÃO PARA JSON", 60)
-
-                            msg_colunas = """ SELECIONE OS CAMPOS QUE DESEJA VER
-                            
-1 - ID_PACIENTE         12 - CIDADE 
-2 - NM_COMPLETO         13 - ESTADO
-3 - DT_NASCIMENTO       14 - NUMERO_ENDERECO
-4 - SEXO                15 - CELULAR
-5 - CPF                 16 - EMAIL
-6 - RG                  17 - CONVENIO
-7 - ESTADO_CIVIL        18 - DT_HORA_CONSULTA
-8 - BRASILEIRO          19 - TIPO_CONSULTA
-9 - CEP                 20 - ESPECIALIDADE
-10 - RUA                21 - STATUS_CONSULTA
-11 - BAIRRO
-
-Digite 'A' para selecionar todas ou '0' para finalizar a seleção.
-"""
-                            colunas_exibir_idx = menu_selecao_colunas(colunas, msg_colunas, "COLUNAS PARA EXPORTAÇÃO")
-
-                            if not colunas_exibir_idx:
-                                print("\nNenhuma coluna selecionada. Voltando ao menu...\n")
-                                input("Pressione ENTER para continuar...")
-                                continue
-
-                            colunas_exibir = [colunas[i] for i in colunas_exibir_idx]
-
-                            nome_arquivo = input("\nDigite o nome do arquivo (sem extensão): ").strip()
-                            if not nome_arquivo:
-                                print("\nNome inválido. Voltando ao menu...\n")
-                                input("Pressione ENTER para continuar...")
-                                continue
-
-                            nome_arquivo = nome_arquivo + ".json"
-
-                            sucesso, erro = exportar_para_json(conn, colunas_exibir, nome_arquivo)
-
-                            limpar_terminal()
-                            if sucesso:
-                                print(f"\nArquivo '{nome_arquivo}' gerado com sucesso!\n")
-                            else:
-                                print(f"\nFalha ao gerar arquivo JSON: {erro}\n")
-
-                            input("\nPressione ENTER para continuar...")
-        case 3:
-            limpar_terminal()
-            exibir_titulo_centralizado("ATUALIZAÇÃO DE PACIENTE", 60)
-
-            pacientes_preview = buscar_todos_pacientes_como_dicionario(conn, colunas, [1, 2, 21])
-            if pacientes_preview:
-                print("Lista de pacientes cadastrados (preview):\n")
-                imprimir_pacientes_tabulate(pacientes_preview)
-            else:
-                print("Nenhum paciente cadastrado no sistema.")
-                input("\nPressione ENTER para voltar ao menu...")
-                continue
-
-            print("\nDigite o ID do paciente que deseja atualizar.")
-            print("Ou digite 0 para voltar ao menu anterior.\n")
-
-            id_paciente = obter_int("ID do paciente: ")
-
-            if id_paciente == 0:
-                print("\nVoltando ao menu principal...")
-                input("\nPressione ENTER para continuar...")
-                limpar_terminal()
-                continue
-
-            cur = conn.cursor()
-            cur.execute("SELECT COUNT(*) FROM T_PACIENTE WHERE ID_PACIENTE = :id", {"id": id_paciente})
-            existe = cur.fetchone()[0]
-            cur.close()
-
-            if not existe:
-                print(f"\nNenhum paciente encontrado com o ID {id_paciente}.")
-                input("\nPressione ENTER para continuar...")
-                continue
-
-            limpar_terminal()
-            exibir_titulo_centralizado("ATUALIZAÇÃO DE DADOS", 60)
-            print(f"Atualizando paciente com ID: {id_paciente}\n")
-
-            novos_dados = solicitar_dados_paciente()
-
-            print("\nDeseja realmente atualizar os dados deste paciente?")
-            if not obter_sim_nao("Confirmar atualização? [S/N]: "):
-                print("\nOperação cancelada pelo usuário.")
-                input("\nPressione ENTER para continuar...")
-                continue
-
-            sucesso, erro = atualizar_paciente(conn, id_paciente, novos_dados)
-
-            if sucesso:
-                print("\nPaciente atualizado com sucesso!")
-            else:
-                print(f"\nErro ao atualizar paciente: {erro}")
-
-            input("\nPressione ENTER para continuar...")
-            limpar_terminal()
-        case 4:
-            id_paciente_remover = -1
-
-            if not verifica_tabela(conn, "T_PACIENTE"):
-                limpar_terminal()
-                exibir_titulo_centralizado("REMOVER REGISTROS", 60)
-                print("\nNenhum paciente encontrado para remover.\n")
-                input("\nPressione ENTER para continuar...")
-                continue
-
-            while id_paciente_remover != 0:
-                limpar_terminal()
-                exibir_titulo_centralizado("REMOVER REGISTROS", 60)
-
-                colunas_preview = {1: "ID_PACIENTE", 2: "NM_COMPLETO", 3: "STATUS_CONSULTA"}
-                pacientes_preview = buscar_todos_pacientes_como_dicionario(conn, colunas_preview, [1, 2, 3])
-
-                if pacientes_preview:
-                    print("\nESCOLHA O ID DO PACIENTE QUE DESEJA REMOVER:\n")
-                    imprimir_pacientes_tabulate(pacientes_preview)
-                    print("\nDIGITE '0' PARA VOLTAR AO MENU PRINCIPAL\n")
-                    id_paciente_remover = obter_int("\nDigite o ID do paciente: ")
-                else:
-                    id_paciente_remover = 0
-                    continue
-
-                if id_paciente_remover == 0:
-                    break
-
-                cur = conn.cursor()
-                cur.execute("SELECT COUNT(*) FROM T_PACIENTE WHERE ID_PACIENTE = :id", {"id": id_paciente_remover})
-                existe = cur.fetchone()[0]
-                cur.close()
-
-                if not existe:
-                    limpar_terminal()
-                    exibir_titulo_centralizado("REMOVER REGISTROS", 60)
-                    print(f"\nNenhum paciente encontrado com o ID {id_paciente_remover}.\n")
-                    input("\nPressione ENTER para continuar...")
-                    continue
-
-                colunas_detalhes = [colunas[i] for i in range(1, 22)]
-                cur = conn.cursor()
-                campos_select = ", ".join(colunas_detalhes)
-                comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE ID_PACIENTE = :id"
-                cur.execute(comando_sql, {"id": id_paciente_remover})
-                resultados = cur.fetchall()
-                nomes_colunas = [col[0].upper() for col in cur.description]
-                cur.close()
-
-                lista_detalhes = []
-                for linha in resultados:
-                    registro = {nomes_colunas[i]: linha[i] for i in range(len(nomes_colunas))}
-                    lista_detalhes.append(registro)
-
-                limpar_terminal()
-                exibir_titulo_centralizado(f"CONFIRMAÇÃO DE REMOÇÃO - ID {id_paciente_remover}", 60)
-
-                if lista_detalhes:
-                    print("DADOS ATUAIS")
-                    imprimir_pacientes_tabulate(lista_detalhes)
-                    escolha = obter_sim_nao("\nDESEJA EXCLUIR ESTE REGISTRO? (S/N): ")
-
-                    if escolha:
-                        sucesso, erro = deletar_paciente(conn, id_paciente_remover)
-                        if sucesso:
-                            print("\nPaciente removido com sucesso!")
-                        else:
-                            print(f"\nErro ao remover o paciente: {erro}\n")
-                    else:
-                        print("\nRemoção cancelada pelo usuário.\n")
-                else:
-                    print("\nNenhum paciente encontrado com esse ID.\n")
-
-                input("\nPressione ENTER para continuar...")
-
-        case 5:
-            limpar_terminal()
-            exibir_titulo_centralizado("REMOVER TODOS OS REGISTROS", 60)
-
-            # Preview para verificar se há registros antes da confirmação
-            colunas_preview = {1: "ID_PACIENTE", 2: "NM_COMPLETO", 3: "STATUS_CONSULTA"}
-            pacientes_preview = buscar_todos_pacientes_como_dicionario(conn, colunas_preview, [1, 2, 3])
-
-            if not pacientes_preview:
-                print("\nNenhum paciente encontrado para ser removido.\n")
-            else:
-                print("\nATENÇÃO: VOCÊ ESTÁ PRESTES A EXCLUIR TODOS OS REGISTROS.\n")
-                print("REGISTROS ATUAIS (PREVIEW):\n")
-                imprimir_pacientes_tabulate(pacientes_preview)
-
-                confirmacao = obter_sim_nao("\nCONFIRMA A EXCLUSÃO DE TODOS OS PACIENTES? [S]im ou [N]ÃO? ")
-
-                if confirmacao:
-                    sucesso, erro = limpar_todos_pacientes(conn)
-                    if sucesso:
-                        print("\nTODOS OS REGISTROS FORAM REMOVIDOS COM SUCESSO\n")
-                    else:
-                        print("\nErro ao remover os registros.\n")
-                        print(f"Detalhes do erro: {erro}")
-                else:
-                    print("\nOperação cancelada pelo usuário.\n")
-
-            input("\nPressione ENTER para continuar...")
-
-'''
-
-from cadastro_paciente import *
-
 campos_msg = """SELECIONE OS CAMPOS QUE DESEJA VISUALIZAR:
 
 === DADOS PESSOAIS ===        === ENDEREÇO ===           === CONTATO / CONVÊNIO ===
@@ -608,35 +52,33 @@ while conectado:
     print("3 - ATUALIZAR REGISTROS")
     print("4 - REMOVER REGISTRO")
     print("5 - LIMPAR TODOS OS REGISTROS")
+    print("6 - EXPORTAÇÃO PARA JSON")
     print("0 - SAIR")
     print("")
-    escolha_menu = obter_int_intervalado("Escolha: ","Entrada inválida.",0,5)
+
+    escolha_menu = obter_int_intervalado("Escolha: ", "Entrada inválida.", 0, 6)
 
     match escolha_menu:
 
-        case 0: # 0 - SAIR
+        case 0:  # SAIR
             limpar_terminal()
             print("\nPrograma encerrado. Até logo!\n")
             conectado = False
-        
-        case 1:  # 1 - REGISTRAR PACIENTE
+
+        case 1:  # REGISTRAR PACIENTE
             limpar_terminal()
             exibir_titulo_centralizado("MENU REGISTRO PACIENTE", 60)
-            
             sucesso_dados, dados_registro = solicitar_dados_paciente()
 
             if sucesso_dados:
                 sucesso, erro = insert_paciente(conn, dados_registro)
-
                 if sucesso:
                     limpar_terminal()
                     print("\nPaciente registrado com sucesso!")
-
                 else:
                     limpar_terminal()
                     print("\nErro ao registrar paciente!")
                     print(erro)
-
             else:
                 limpar_terminal()
                 print("\nErro ao coletar os dados do paciente!")
@@ -644,46 +86,476 @@ while conectado:
             input("\nAperte ENTER para voltar ao menu principal...")
 
         case 2:  # CONSULTAR REGISTROS
-            escolha_submenu = -1
-            while escolha_submenu != 0:
+            resultado = verifica_tabela(conn, "T_PACIENTE")
+            if resultado:
+                escolha_submenu = -1
+                while escolha_submenu != 0:
+                    limpar_terminal()
+                    exibir_titulo_centralizado("MENU CONSULTA PACIENTE", 60)
+                    print("DESEJA FAZER SUA CONSULTA POR:")
+                    print("1 - TODOS OS PACIENTES")
+                    print("2 - POR ID DO PACIENTE")
+                    print("3 - PESQUISA DE TEXTO")
+                    print("4 - PESQUISA NUMÉRICA")
+                    print("0 - VOLTAR\n")
+
+                    escolha_submenu = obter_int_intervalado("Escolha: ", "Entrada inválida.", 0, 5)
+
+                    match escolha_submenu:
+                        case 0:  # VOLTAR
+                            break
+
+                        case 1:  # TODOS OS PACIENTES
+                            limpar_terminal()
+                            exibir_titulo_centralizado("CONSULTA - TODOS OS PACIENTES", 60)
+                            texto, lista = obter_multiplas_opcoes_dict(
+                                campos_msg,
+                                "Erro! Escolha os campos separando os números por ',' .",
+                                campos_dict
+                            )
+
+                            sucesso, busca = select_paciente(conn, texto)
+                            if sucesso:
+                                sucesso, tabela = imprimir_resultado_tabulate_oracle(busca)
+                                if sucesso:
+                                    limpar_terminal()
+                                    exibir_titulo_centralizado("CONSULTA - TODOS OS PACIENTES", 60)
+                                    print(tabela)
+                                else:
+                                    limpar_terminal()
+                                    print("\nErro ao formatar os resultados:")
+                                    print(tabela)
+                            else:
+                                limpar_terminal()
+                                print("\nErro ao consultar pacientes no banco de dados:")
+                                print(busca)
+
+                            input("\nAperte ENTER para voltar ao menu de consulta...")
+
+                        case 2:  # POR ID DO PACIENTE
+                            limpar_terminal()
+                            exibir_titulo_centralizado("CONSULTA - PACIENTE POR ID", 60)
+
+                            # Obter preview dos pacientes existentes
+                            sucesso_select, resultados_preview = select_paciente(
+                                conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
+                            )
+
+                            if sucesso_select:
+                                sucesso_preview, tabela_preview = imprimir_resultado_tabulate_oracle(resultados_preview)
+                            else:
+                                sucesso_preview = False
+                                tabela_preview = f"Erro ao consultar pacientes: {resultados_preview}"
+
+                            if sucesso_preview:
+                                resp = True
+                                while resp:
+                                    limpar_terminal()
+                                    exibir_titulo_centralizado("CONSULTA - PACIENTE POR ID", 60)
+                                    print(tabela_preview)
+
+                                    resp = obter_sim_nao("Deseja pesquisar consulta por ID? (S/N): ", "Erro. Digite S ou N.")
+                                    if resp:
+                                        _id_paciente = obter_int("\nDigite o ID do paciente: ", "ID inválido. Digite um número inteiro.")
+                                        
+                                        limpar_terminal()
+                                        exibir_titulo_centralizado("CONSULTA - PACIENTE POR ID", 60)
+                                        
+                                        texto, lista = obter_multiplas_opcoes_dict(
+                                            campos_msg,
+                                            "Erro! Escolha os campos separando os números por ',' .",
+                                            campos_dict
+                                        )
+                                        
+                                        try:
+                                            # Desempacotar corretamente a tupla retornada
+                                            sucesso_select_id, resultados = select_paciente_por_id(conn, texto, _id_paciente)
+
+                                            if not resultados:  # lista vazia
+                                                limpar_terminal()
+                                                print(f"\nNenhum paciente encontrado com ID {_id_paciente}.")
+                                            else:
+                                                sucesso, tabela = imprimir_resultado_tabulate_oracle(resultados)
+                                                if sucesso:
+                                                    limpar_terminal()
+                                                    exibir_titulo_centralizado(f"PACIENTE - ID {_id_paciente}", 60)
+                                                    print(tabela)
+                                                else:
+                                                    limpar_terminal()
+                                                    print("\nErro ao formatar os resultados:")
+                                                    print(tabela)
+
+                                        except Exception as e:
+                                            limpar_terminal()
+                                            print("\nErro ao consultar paciente no banco de dados:")
+                                            print(e)
+
+                                        input("\nAperte ENTER para continuar...")
+                                    else:
+                                        break
+                            else:
+                                limpar_terminal()
+                                print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
+                                input("\nAperte ENTER para voltar ao menu principal...")
+
+                        case 3:  # PESQUISA DE TEXTO
+                            limpar_terminal()
+                            exibir_titulo_centralizado("PESQUISA DE TEXTO - PACIENTES", 60)
+
+                            # Preview dos pacientes para referência
+                            sucesso_select, resultados_preview = select_paciente(
+                                conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
+                            )
+
+                            if sucesso_select:
+                                sucesso_preview, tabela_preview = imprimir_resultado_tabulate_oracle(resultados_preview)
+                            else:
+                                sucesso_preview = False
+                                tabela_preview = f"Erro ao consultar pacientes: {resultados_preview}"
+
+                            if sucesso_preview:
+                                resp = True
+                                while resp:
+                                    limpar_terminal()
+                                    exibir_titulo_centralizado("PESQUISA DE TEXTO - PACIENTES", 60)
+                                    print(tabela_preview)
+
+                                    resp = obter_sim_nao("Deseja pesquisar paciente por texto? (S/N): ", "Erro. Digite S ou N.")
+                                    print("")
+                                    if resp:
+                                        # Campo para busca textual
+                                        campo_busca_dict = {
+                                            1: "NM_COMPLETO",
+                                            2: "ESTADO_CIVIL",
+                                            3: "RUA",
+                                            4: "BAIRRO",
+                                            5: "CIDADE",
+                                            6: "EMAIL",
+                                            7: "TIPO_CONSULTA",
+                                            8: "ESPECIALIDADE",
+                                            9: "STATUS_CONSULTA"
+                                        }
+
+                                        campo_busca = obter_opcao_dict(
+                                            """Escolha o campo para pesquisar por texto:
+1 - Nome
+2 - Estado Civil
+3 - Rua
+4 - Bairro
+5 - Cidade
+6 - E-mail
+7 - Tipo de Consulta
+8 - Especialidade
+9 - Status da Consulta
+Escolha: """,
+                                            "Opção inválida!",
+                                            campo_busca_dict
+                                        )
+
+                                        texto_pesquisa = obter_texto("\nDigite o texto a ser pesquisado: ", "Entrada inválida!")
+
+                                        limpar_terminal()
+                                        exibir_titulo_centralizado("PESQUISA DE TEXTO - PACIENTES", 60)
+                                        # Seleção de colunas para exibição
+                                        texto_colunas, lista_colunas = obter_multiplas_opcoes_dict(
+                                            campos_msg,
+                                            "Erro! Escolha os campos separando os números por ',' .",
+                                            campos_dict
+                                        )
+
+                                        # Buscar pacientes
+                                        resultados = buscar_paciente_por_texto(conn, campo_busca, texto_pesquisa, texto_colunas)
+
+                                        if not resultados:
+                                            limpar_terminal()
+                                            print(f"\nNenhum paciente encontrado com '{texto_pesquisa}' no campo {campo_busca}.")
+                                        else:
+                                            sucesso, tabela = imprimir_resultado_tabulate_oracle(resultados)
+                                            if sucesso:
+                                                limpar_terminal()
+                                                exibir_titulo_centralizado(f"RESULTADOS DA PESQUISA - {campo_busca}", 60)
+                                                print(tabela)
+                                            else:
+                                                limpar_terminal()
+                                                print("\nErro ao formatar os resultados:")
+                                                print(tabela)
+
+                                        input("\nAperte ENTER para continuar...")
+                                    else:
+                                        break
+                            else:
+                                limpar_terminal()
+                                print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
+                                input("\nAperte ENTER para voltar ao menu principal...")
+
+                        case 4:  # PESQUISA NUMÉRICA
+                            limpar_terminal()
+                            exibir_titulo_centralizado("PESQUISA NUMÉRICA - PACIENTES", 60)
+
+                            # Preview dos pacientes para referência
+                            sucesso_select, resultados_preview = select_paciente(
+                                conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
+                            )
+
+                            if sucesso_select:
+                                sucesso_preview, tabela_preview = imprimir_resultado_tabulate_oracle(resultados_preview)
+                            else:
+                                sucesso_preview = False
+                                tabela_preview = f"Erro ao consultar pacientes: {resultados_preview}"
+
+                            if sucesso_preview:
+                                resp = True
+                                while resp:
+                                    limpar_terminal()
+                                    exibir_titulo_centralizado("PESQUISA NUMÉRICA - PACIENTES", 60)
+                                    print(tabela_preview)
+
+                                    resp = obter_sim_nao("Deseja pesquisar paciente por valor numérico? (S/N): ", "Erro. Digite S ou N.")
+                                    if not resp:
+                                        break
+
+                                    # Escolher o campo numérico para pesquisa
+                                    campo_busca_dict = {1:"ID_PACIENTE",2:"NUMERO_ENDERECO"}
+                                    print()
+                                    campo_busca = obter_opcao_dict(
+                                        """Escolha o campo numérico para pesquisar:
+1. ID_PACIENTE
+2. NUMERO_ENDERECO"
+
+Escolha: """,
+                                        "Opção inválida!",
+                                        campo_busca_dict
+                                    )
+
+                                    valor = obter_int("\nDigite o valor para pesquisa: ", "Entrada inválida. Digite um número inteiro.")
+
+                                    print()
+                                    operador = obter_opcao_dict(
+                                        """Escolha o operador para pesquisa:
+1. Igual (=)
+2. Maior (>)
+3. Menor (<)
+4. Maior ou igual (>=)
+5. Menor ou igual (<=)
+6. Diferente (<>)
+Escolha: """,
+                                        "Opção inválida!",
+                                        {1: "=", 2: ">", 3: "<", 4: ">=", 5: "<=", 6: "<>"}
+                                    )
+
+
+                                    # Seleção de colunas para exibição
+                                    limpar_terminal()
+                                    exibir_titulo_centralizado("PESQUISA NUMÉRICA - PACIENTES", 60)
+                                    texto_colunas, lista_colunas = obter_multiplas_opcoes_dict(
+                                        campos_msg,
+                                        "Erro! Escolha os campos separando os números por ',' .",
+                                        campos_dict
+                                    )
+
+                                    # Buscar pacientes
+                                    resultados = buscar_paciente_por_numero(conn, campo_busca, operador, valor, texto_colunas)
+
+                                    if not resultados:
+                                        limpar_terminal()
+                                        print(f"\nNenhum paciente encontrado com {campo_busca} {operador} {valor}.")
+                                    else:
+                                        sucesso, tabela = imprimir_resultado_tabulate_oracle(resultados)
+                                        if sucesso:
+                                            limpar_terminal()
+                                            exibir_titulo_centralizado(f"RESULTADOS DA PESQUISA - {campo_busca}", 60)
+                                            print(tabela)
+                                        else:
+                                            limpar_terminal()
+                                            print("\nErro ao formatar os resultados:")
+                                            print(tabela)
+
+                                    input("\nAperte ENTER para continuar...")
+                            else:
+                                limpar_terminal()
+                                print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
+                                input("\nAperte ENTER para voltar ao menu principal...")
+
+            else:
                 limpar_terminal()
-                exibir_titulo_centralizado("MENU CONSULTA PACIENTE", 60)
+                print("\nNenhum registro encontrado na tabela T_PACIENTE para consulta.")
+                input("\nAperte ENTER para voltar ao menu principal...")
 
-                print("DESEJA FAZER SUA CONSULTA POR:")
-                print("1 - TODOS OS PACIENTES")
-                print("2 - POR ID DO PACIENTE")
-                print("3 - PESQUISA DE TEXTO")
-                print("4 - PESQUISA NUMÉRICA")
-                print("5 - PESQUISA LIVRE")
-                print("0 - VOLTAR")
-                print("")
+        case 3:  # ATUALIZAR REGISTROS
+            limpar_terminal()
+            exibir_titulo_centralizado("ATUALIZAR REGISTROS", 60)
 
-                escolha_submenu = obter_int_intervalado("Escolha: ","Entrada inválida.",0,5)
+            # Preview dos pacientes para referência
+            sucesso_select, resultados_preview = select_paciente(
+                conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
+            )
 
-                match escolha_submenu:
-                    case 0:
-                        escolha_submenu = 0
+            if sucesso_select:
+                sucesso_preview, tabela_preview = imprimir_resultado_tabulate_oracle(resultados_preview)
+            else:
+                sucesso_preview = False
+                tabela_preview = f"Erro ao consultar pacientes: {resultados_preview}"
 
-                    case 1:  # TODOS OS PACIENTES
+            if sucesso_preview:
+                resp = True
+                while resp:
+                    limpar_terminal()
+                    exibir_titulo_centralizado("ATUALIZAR REGISTROS", 60)
+                    print(tabela_preview)
+
+                    resp = obter_sim_nao("Deseja atualizar algum paciente? (S/N): ", "Erro. Digite S ou N.")
+                    if not resp:
+                        break
+
+                    # Selecionar paciente pelo ID
+                    _id_paciente = obter_int("\nDigite o ID do paciente que deseja atualizar: ", "ID inválido. Digite um número inteiro.")
+
+                    # Buscar paciente específico
+                    sucesso, resultados = select_paciente_por_id(conn, "*", _id_paciente)
+                    if not resultados:
                         limpar_terminal()
-                        exibir_titulo_centralizado("CONSULTA - TODOS OS PACIENTES", 60)
-                        
-                        texto, lista = obter_multiplas_opcoes_dict(
-                            campos_msg,
-                            "Erro! Escolha os campos separando os números por ',' .",
-                            campos_dict
-                        )
+                        print(f"\nNenhum paciente encontrado com ID {_id_paciente}.")
+                        input("\nAperte ENTER para voltar ao menu de atualização...")
+                        continue
 
+                    # Exibir paciente selecionado verticalmente
+                    limpar_terminal()
+                    exibir_titulo_centralizado(f"PACIENTE - ID {_id_paciente}", 60)
+                    imprimir_resultado_vertical_oracle(resultados)
+
+                    # Dicionário de campos possíveis para atualização
+                    campos_dict = {
+                        1: "NM_COMPLETO",
+                        2: "DATA_NASCIMENTO",
+                        3: "SEXO",
+                        4: "CPF",
+                        5: "RG",
+                        6: "ESTADO_CIVIL",
+                        7: "BRASILEIRO",
+                        8: "ENDERECO",
+                        9: "NUMERO_ENDERECO",
+                        10: "CELULAR",
+                        11: "EMAIL",
+                        12: "CONVENIO",
+                        13: "DATA_HORA_CONSULTA",
+                        14: "TIPO_CONSULTA",
+                        15: "ESPECIALIDADE",
+                        16: "STATUS_CONSULTA"
+                    }
+
+                    print()
+                    # Escolher campo para atualizar
+                    campo = obter_opcao_dict("""Escolha o campo que deseja atualizar:
+1 - Nome
+2 - Data de Nascimento
+3 - Sexo
+4 - CPF
+5 - RG
+6 - Estado Civil
+7 - Brasileiro?
+8 - Endereço
+9 - Número do Endereço
+10 - Celular
+11 - E-mail
+12 - Convênio
+13 - Data/Hora Consulta
+14 - Tipo de Consulta
+15 - Especialidade
+16 - Status da Consulta
+Escolha: """,
+                        "Opção inválida!",
+                        campos_dict
+                    )
+
+                    # Chamar a função de atualização
+                    sucesso_update, erro = atualizar_coluna_paciente(conn, _id_paciente, campo)
+
+                    if sucesso_update:
                         limpar_terminal()
-                        print(f"campos em texto:\n{texto}\n")
-                        print(f"campos em lista:\n{lista}")
+                        print(f"\nCampo '{campo}' atualizado com sucesso!")
+                    else:
+                        limpar_terminal()
+                        print(f"\nErro ao atualizar o campo '{campo}': {erro}")
 
-                        input("\nAperte ENTER para voltar ao menu de consulta...")
-                    case 2:
-                        ...
-                    case 3:
-                        ...
-                    case 4:
-                        ...
-                    case 5:
-                        ...
+                    input("\nAperte ENTER para continuar...")
+            else:
+                limpar_terminal()
+                print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
+                input("\nAperte ENTER para voltar ao menu principal...")
+
+
+
+        case 4:  # REMOVER REGISTRO
+            limpar_terminal()
+            exibir_titulo_centralizado("REMOVER REGISTRO", 60)
+
+            # Preview dos pacientes para referência
+            sucesso_select, resultados_preview = select_paciente(
+                conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
+            )
+
+            if sucesso_select:
+                sucesso_preview, tabela_preview = imprimir_resultado_tabulate_oracle(resultados_preview)
+            else:
+                sucesso_preview = False
+                tabela_preview = f"Erro ao consultar pacientes: {resultados_preview}"
+
+            if sucesso_preview:
+                resp = True
+                while resp:
+                    limpar_terminal()
+                    exibir_titulo_centralizado("REMOVER REGISTRO", 60)
+                    print(tabela_preview)
+
+                    resp = obter_sim_nao("Deseja remover algum paciente por ID? (S/N): ", "Erro. Digite S ou N.")
+                    if resp:
+                        _id_paciente = obter_int("\nDigite o ID do paciente a ser removido: ", "ID inválido. Digite um número inteiro.")
+
+                        confirmar = obter_sim_nao(f"\nTem certeza que deseja remover o paciente ID {_id_paciente}? (S/N): ", "Erro. Digite S ou N.")
+                        if confirmar:
+                            sucesso, erro = deletar_paciente(conn, _id_paciente)
+                            if sucesso:
+                                print(f"\nPaciente ID {_id_paciente} removido com sucesso!")
+                            else:
+                                print(f"\nErro ao remover paciente: {erro}")
+
+                        input("\nAperte ENTER para continuar...")
+                    else:
+                        break
+            else:
+                limpar_terminal()
+                print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
+                input("\nAperte ENTER para voltar ao menu principal...")
+
+        case 5:  # LIMPAR TODOS OS REGISTROS
+            limpar_terminal()
+            exibir_titulo_centralizado("LIMPAR TODOS OS REGISTROS", 60)
+
+            confirmar = obter_sim_nao("Tem certeza que deseja apagar TODOS os registros de pacientes? (S/N): ", "Erro. Digite S ou N.")
+            if confirmar:
+                sucesso, erro = limpar_todos_pacientes(conn)
+                if sucesso:
+                    print("\nTodos os registros de pacientes foram apagados com sucesso!")
+                else:
+                    print(f"\nErro ao apagar registros: {erro}")
+            else:
+                print("\nOperação cancelada pelo usuário.")
+
+            input("\nAperte ENTER para voltar ao menu principal...")
+        case 6:  # EXPORTAÇÃO PARA JSON
+            limpar_terminal()
+            exibir_titulo_centralizado("EXPORTAÇÃO PARA JSON", 60)
+
+            # Perguntar ao usuário o nome do arquivo (opcional)
+            nome_arquivo = input("Digite o nome do arquivo para exportação (padrão: pacientes.json): ").strip()
+            if not nome_arquivo:
+                nome_arquivo = "pacientes.json"
+
+            sucesso, erro = exportar_para_json(conn, nome_arquivo)
+
+            if sucesso:
+                print(f"\nExportação concluída com sucesso! Arquivo salvo como '{nome_arquivo}'.")
+            else:
+                print(f"\nErro ao exportar para JSON: {erro}")
+
+            input("\nAperte ENTER para voltar ao menu principal...")

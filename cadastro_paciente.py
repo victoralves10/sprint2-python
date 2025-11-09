@@ -39,8 +39,16 @@ CREATE TABLE T_PACIENTE (
 
     -- Controle de registro
     DT_CADASTRO        DATE DEFAULT SYSDATE,
-    DT_ULTIMA_ATUALIZACAO DATE
+    DT_ULTIMA_ATUALIZACAO TIMESTAMP DEFAULT SYSTIMESTAMP
 );
+
+-- Trigger para atualizar automaticamente DT_ULTIMA_ATUALIZACAO
+CREATE OR REPLACE TRIGGER trg_t_paciente_atualizacao
+BEFORE UPDATE ON T_PACIENTE
+FOR EACH ROW
+BEGIN
+    :NEW.DT_ULTIMA_ATUALIZACAO := SYSTIMESTAMP;
+END;
 """
 
 # Este programa utiliza a API pública do ViaCEP para consultar informações de endereços
@@ -547,17 +555,8 @@ Escolha: """, "Opção inválida!", status_consulta_dict)
 # ==========================================================
 #   FORMATAÇÃO DE VALORES
 # ==========================================================
-# def formatar_valor(valor, largura_max: int = 20) -> str:
-    """
-    Formata um valor para exibição em tabela, quebrando linhas longas e tratando datas.
+def formatar_valor(valor, largura_max: int = 20) -> str:
 
-    Args:
-        valor: valor a ser formatado (str, int, float, datetime, date, None)
-        largura_max: largura máxima da célula antes de quebrar linha
-
-    Returns:
-        str formatado
-    """
     if valor is None:
         return ""
     elif isinstance(valor, datetime):
@@ -638,7 +637,6 @@ def imprimir_resultado_vertical_oracle(dados: list[dict]) -> None:
 
     registro = dados[0]
     df = pd.DataFrame(list(registro.items()), columns=["Campo", "Valor"])
-    df.insert(0, "Nº", range(1, len(df) + 1))
     
     print(df.to_string(index=False))
 
@@ -669,11 +667,14 @@ def conectar_oracledb(_user: str, _password: str, _dsn: str) -> tuple[bool, any]
 # ========= FUNÇÃO PARA VERIFICAR SE TABELA TEM DADOS =========
 def verifica_tabela(_conexao: oracledb.Connection, nome_tabela: str) -> bool:
     """Verifica se a tabela possui registros e retorna True ou False."""
-    cur = _conexao.cursor()
     try:
+        cur = _conexao.cursor()
         cur.execute(f"SELECT 1 FROM {nome_tabela} WHERE ROWNUM = 1")
-        resultado = cur.fetchone() # pegar apenas uma linha
+        resultado = cur.fetchone()
         return bool(resultado)
+    except Exception as e:
+        print(f"Erro ao verificar tabela {nome_tabela}: {e}")
+        return False
     finally:
         cur.close()
 
@@ -703,190 +704,227 @@ def insert_paciente(_conexao: oracledb.Connection, _dados_paciente: dict) -> tup
     except Exception as e:
         return (False, e)
 
-'''
-# ========= UPDATE PACIENTE POR ID =========
-def atualizar_paciente(_conexao: oracledb.Connection, _id_paciente: int, _dados_paciente: dict) -> tuple[bool, any]:
-    """Atualiza os dados de um paciente pelo ID e retorna (True, None) ou (False, erro)."""
+# ========= SELECT PACIENTE =========
+def select_paciente(_conexao: oracledb.Connection, _campos: str) -> tuple[bool, any]:
+    """
+    Retorna registros da tabela T_PACIENTE como lista de dicionários.
+    Recebe uma string com os campos para SELECT (ex: id_paciente, nm_completo).
+    """
     try:
-        comando_sql = """
-        UPDATE T_PACIENTE
-        SET
-            NM_COMPLETO = :nome_completo,
-            DT_NASCIMENTO = TO_DATE(:data_nascimento, 'DD/MM/YYYY'),
-            SEXO = :sexo,
-            CPF = :cpf,
-            RG = :rg,
-            ESTADO_CIVIL = :estado_civil,
-            BRASILEIRO = :brasileiro,
-            CEP = :cep,
-            RUA = :rua,
-            BAIRRO = :bairro,
-            CIDADE = :cidade,
-            ESTADO = :estado,
-            NUMERO_ENDERECO = :numero_endereco,
-            CELULAR = :celular,
-            EMAIL = :email,
-            CONVENIO = :convenio,
-            DT_HORA_CONSULTA = TO_TIMESTAMP(:data_hora_consulta, 'DD/MM/YYYY HH24:MI'),
-            TIPO_CONSULTA = :tipo_consulta,
-            ESPECIALIDADE = :especialidade,
-            STATUS_CONSULTA = :status_consulta
-        WHERE ID_PACIENTE = :id_paciente
-        """
+        query = f"SELECT {_campos} FROM T_PACIENTE"
 
-        # adiciona o ID para o bind
-        _dados_paciente["id_paciente"] = _id_paciente
+        with _conexao.cursor() as cur:
+            cur.execute(query)
+
+            colunas_cursor = []
+            for c in cur.description:
+                colunas_cursor.append(c[0].lower())
+
+            resultados = cur.fetchall()
+            df = pd.DataFrame(resultados, columns=colunas_cursor)
+
+
+        return True, df.to_dict(orient="records")
+
+    except Exception as e:
+        return False, e
+
+# ========= SELECT PACIENTE POR ID =========
+def select_paciente_por_id(_conexao: oracledb.Connection, campos: str, _id_paciente: int) -> tuple[bool, any]:
+
+    if not _id_paciente:
+        return False, "Erro: é necessário informar o ID do paciente."
+
+    try:
+        query = f"SELECT {campos} FROM T_PACIENTE WHERE id_paciente = :id_paciente"
 
         cur = _conexao.cursor()
-        cur.execute(comando_sql, _dados_paciente)
-        _conexao.commit()
+        cur.execute(query, {"id_paciente": _id_paciente})
+
+        colunas_cursor = []
+        for c in cur.description:
+            colunas_cursor.append(c[0].lower())
+
+        # Obter dados
+        resultados = cur.fetchall()
+
         cur.close()
 
-        return (True, None)
+        if not resultados:
+            return True, []  
+
+        df = pd.DataFrame(resultados, columns=colunas_cursor)
+        return True, df.to_dict(orient="records")
+
     except Exception as e:
-        return (False, e)
-
-# ========= SELECT PACIENTE =========
-def buscar_todos_pacientes_como_dicionario(_conexao: oracledb.Connection, colunas: dict, _numeros_colunas: list = None) -> list:
-    """Busca todos os pacientes e retorna uma lista de dicionários com seus dados formatados."""
-    
-    # Se não foram passadas colunas, usa todas as chaves do dicionário 'colunas'
-    if not _numeros_colunas:
-        _numeros_colunas = []
-
-        # Preenche '_numeros_colunas' com todos os índices disponíveis
-        for key in colunas.keys():
-            _numeros_colunas.append(key)
-
-    # Monta a string das colunas que serão selecionadas na query
-    campos_selecionados = ""
-    for i, col in enumerate(_numeros_colunas):
-
-        # Adiciona a coluna, separando por vírgula se não for a primeira
-        if i == 0:
-            campos_selecionados += colunas[col]
-        else:
-            campos_selecionados += ", " + colunas[col]
-
-    # Executa a query e obtém os resultados
-    cur = _conexao.cursor()
-    cur.execute(f"SELECT {campos_selecionados} FROM T_PACIENTE")
-
-    # Pega os nomes das colunas do resultado e transforma em maiúsculas
-    nomes_colunas = []
-    for col in cur.description:
-        nomes_colunas.append(col[0].upper())
-
-    # Busca todas as linhas retornadas pelo banco e fecha o cursor
-    resultados_db = cur.fetchall()
-    cur.close()
-
-    # Constrói uma lista de dicionários, um para cada paciente
-    lista_de_pacientes = []
-    for linha in resultados_db:
-        registro = {}
-        for i in range(len(linha)):
-            chave = nomes_colunas[i]
-            valor = linha[i]
-
-            # Converter data de nascimento para datetime.date (somente dia/mês/ano)
-            if chave == "DT_NASCIMENTO" and isinstance(valor, datetime):
-                registro[chave] = valor.date()  # só dia/mês/ano
-            else:
-                registro[chave] = valor
-        lista_de_pacientes.append(registro)
-
-    # Retorna a lista completa de pacientes como dicionários
-    return lista_de_pacientes
+        return False, str(e)
 
 # ========= SELECT PACIENTE POR TEXTO =========
-def buscar_paciente_por_texto(_conexao: oracledb.Connection, _campo_where: str, _texto: str, _colunas_exibir: list) -> list:
-    """Busca pacientes por texto em um campo e retorna lista de dicionários."""
-    
-    campos_validos = [
-        "NM_COMPLETO", "ESTADO_CIVIL", "CEP", "RUA", "BAIRRO",
-        "CIDADE", "ESTADO", "CELULAR", "EMAIL",
-        "ESPECIALIDADE", "STATUS_CONSULTA", "TIPO_CONSULTA"
-    ]
+def buscar_paciente_por_texto(_conexao: oracledb.Connection, _campo_where: str, _texto: str, _colunas_exibir: str) -> list[dict]:
+    campos_validos = ["NM_COMPLETO", "ESTADO_CIVIL", "RUA", "BAIRRO", "CIDADE", "EMAIL", "TIPO_CONSULTA",
+    "ESPECIALIDADE", "STATUS_CONSULTA"]
 
     if _campo_where.upper() not in campos_validos:
         print("\nErro: campo inválido para busca textual.\n")
         return []
 
-    if not _colunas_exibir:
+    if not _colunas_exibir.strip():
         print("\nErro: nenhuma coluna selecionada para exibição.\n")
         return []
 
-    campos_select = ", ".join(_colunas_exibir)
-
-    cur = _conexao.cursor()
-    comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE UPPER({_campo_where}) LIKE :texto"
+    comando_sql = f"""
+        SELECT {_colunas_exibir}
+        FROM T_PACIENTE
+        WHERE UPPER({_campo_where}) LIKE :texto
+    """
 
     try:
+        cur = _conexao.cursor()
         cur.execute(comando_sql, {"texto": f"%{_texto.upper()}%"})
         resultados = cur.fetchall()
-        
-        nomes_colunas = []
-        for col in cur.description:
-            nomes_colunas.append(col[0].upper())
-            
+
+        colunas = [col[0].upper() for col in cur.description]
+
+        # Transformar resultados em lista de dicionários
+        lista_pacientes = [dict(zip(colunas, linha)) for linha in resultados]
+
+        return lista_pacientes
+
     except Exception as e:
         print(f"\nErro ao executar consulta SQL: {e}\n")
-        cur.close()
         return []
+
     finally:
         cur.close()
 
-    lista_pacientes = []
-    for linha in resultados:
-        registro = {}
-        i = 0
-        for valor in linha:
-            chave = nomes_colunas[i]
-            registro[chave] = valor
-            i += 1
-        lista_pacientes.append(registro)
-
-    return lista_pacientes
-
 # ========= SELECT PACIENTE POR NÚMERO =========
-def buscar_paciente_por_numero(_conexao: oracledb.Connection, _campo: str, _operador: str, _valor: int, _colunas_exibir: list) -> list:
-    """Busca pacientes por valor numérico em um campo usando operador e retorna lista de dicionários."""
+def buscar_paciente_por_numero(_conexao: oracledb.Connection, _campo: str, _operador: str, _valor: int, _colunas_exibir: str) -> list[dict]:
+    """
+    Busca pacientes por valor numérico em um campo usando operador e retorna lista de dicionários.
     
-    campos_select = ", ".join(_colunas_exibir)
+    Args:
+        _conexao (oracledb.Connection): conexão ativa com Oracle
+        _campo (str): nome do campo numérico para filtro
+        _operador (str): operador de comparação (=, >, <, >=, <=)
+        _valor (int): valor a ser pesquisado
+        _colunas_exibir (str): string com os nomes das colunas a exibir, separados por vírgula
+    
+    Returns:
+        list[dict]: lista de dicionários com os resultados
+    """
+    comando_sql = f"SELECT {_colunas_exibir} FROM T_PACIENTE WHERE {_campo} {_operador} :valor"
     cur = _conexao.cursor()
-    comando_sql = f"SELECT {campos_select} FROM T_PACIENTE WHERE {_campo} {_operador} :valor"
 
     try:
         cur.execute(comando_sql, {"valor": _valor})
         resultados = cur.fetchall()
-        
-        # For à moda antiga para nomes das colunas
-        nomes_colunas = []
-        for col in cur.description:
-            nomes_colunas.append(col[0].upper())
-            
+        nomes_colunas = [col[0].upper() for col in cur.description]
+
+        # Transformar resultados em lista de dicionários
+        lista_pacientes = [dict(zip(nomes_colunas, linha)) for linha in resultados]
+
+        return lista_pacientes
+
     except Exception as e:
         print(f"\nErro ao executar consulta SQL: {e}\n")
-        cur.close()
         return []
+
     finally:
         cur.close()
 
-    # For à moda antiga para criar lista de dicionários
-    lista_pacientes = []
-    for linha in resultados:
-        registro = {}
-        i = 0
-        for valor in linha:
-            chave = nomes_colunas[i]
-            registro[chave] = valor
-            i += 1
-        lista_pacientes.append(registro)
+def atualizar_coluna_paciente(conn, id_paciente, coluna):
+    """
+    Atualiza uma coluna específica de um paciente.
+    A função pergunta o valor correto dependendo da coluna usando match-case.
+    Retorna (True, None) se sucesso, ou (False, erro) se falha.
+    """
+    try:
+        coluna_upper = coluna.upper()
+        
+        # Solicita o valor correto conforme a coluna
+        match coluna_upper:
+            # DADOS DO PACIENTE
+            case "NM_COMPLETO":
+                valor = obter_texto("\nNome do paciente: ", "Nome inválido!")
+            case "DATA_NASCIMENTO":
+                valor = obter_data("\nData de nascimento (dd/mm/aaaa): ", "Data inválida!")
+            case "SEXO":
+                valor = obter_m_f("\nSexo [M/F]: ", "Entrada inválida! Digite M ou F.")
+            case "CPF":
+                valor = obter_cpf("\nCPF (somente números, ex: 12345678901): ", "CPF inválido!")
+            case "RG":
+                valor = obter_rg("\nRG (somente números, ex: 123456789): ", "RG inválido!")
+            case "ESTADO_CIVIL":
+                estado_civil_dict = {1: "Solteiro", 2: "Casado", 3: "Divorciado", 4: "Viuvo"}
+                valor = obter_opcao_dict("""\nEstado civil
+1 - Solteiro
+2 - Casado
+3 - Divorciado
+4 - Viuvo
+Escolha: """, "Opção inválida!", estado_civil_dict)
+            case "BRASILEIRO" | "CONVENIO":
+                valor = obter_sim_nao(f"\n{coluna.replace('_', ' ').capitalize()}? [S/N]: ", "Entrada inválida!")
+            case "ENDERECO":
+                valor = obter_endereco("\nCEP (ex: 01310200): ", "CEP inválido!")
+            case "NUMERO_ENDERECO":
+                valor = obter_int("\nNúmero da residência (ex: 123): ", "Número inválido!")
+            case "CELULAR":
+                valor = obter_texto("\nCelular (DDD + número — ex: 11987654321): ", "Número inválido!")
+            case "EMAIL":
+                valor = obter_email("\nInforme o e-mail (exemplo: exemplo@email.com)\nE-mail: ", "E-mail inválido!")
+            
+            # DADOS DA CONSULTA
+            case "DATA_HORA_CONSULTA":
+                valor = obter_data_hora("\nDigite a data e hora da consulta (ex: 25/10/2025 14:30): ", "Data e hora inválida!")
+            case "TIPO_CONSULTA":
+                tipo_consulta_dict = {1: "Retorno", 2: "Emergencia", 3: "Rotina", 4: "Exame", 5: "Geral"}
+                valor = obter_opcao_dict("""\nTipo de consulta
+1 - Retorno
+2 - Emergencia
+3 - Rotina
+4 - Exame
+5 - Geral
+Escolha: """, "Opção inválida!", tipo_consulta_dict)
+            case "ESPECIALIDADE":
+                especialidade_dict = {
+                    1: "Cardiologia", 2: "Neurologia", 3: "Ortopedia",
+                    4: "Dermatologia", 5: "Pediatria", 6: "Oftalmologia",
+                    7: "Clínico Geral"
+                }
+                valor = obter_opcao_dict("""\nEspecialidade
+1 - Cardiologia
+2 - Neurologia
+3 - Ortopedia
+4 - Dermatologia
+5 - Pediatria
+6 - Oftalmologia
+7 - Clínico Geral
+Escolha: """, "Opção inválida!", especialidade_dict)
+            case "STATUS_CONSULTA":
+                status_consulta_dict = {1: "Realizada", 2: "Cancelada", 3: "Absenteísmo"}
+                valor = obter_opcao_dict("""Status da consulta
+1 - Realizada
+2 - Cancelada
+3 - Absenteísmo
+Escolha: """, "Opção inválida!", status_consulta_dict)
+            
+            case _:
+                return (False, f"Coluna '{coluna}' não reconhecida!")
 
-    return lista_pacientes
+        # Monta e executa o comando SQL
+        comando_sql = f"UPDATE T_PACIENTE SET {coluna_upper} = :valor WHERE ID_PACIENTE = :id_paciente"
+        dados_paciente = {"valor": valor, "id_paciente": id_paciente}
 
-# ========= DELETE PACIENTE =========
+        cur = conn.cursor()
+        cur.execute(comando_sql, dados_paciente)
+        conn.commit()
+        cur.close()
+
+        return (True, None)
+
+    except Exception as e:
+        return (False, e)
+
 def deletar_paciente(_conexao: oracledb.Connection, _id_paciente: int) -> tuple[bool, any]:
     """Remove paciente pelo ID e retorna status da operação."""
     try:
@@ -905,7 +943,6 @@ def deletar_paciente(_conexao: oracledb.Connection, _id_paciente: int) -> tuple[
     except Exception as e:
         return (False, e)
 
-# ========= DELETE TODOS OS PACIENTES =========
 def limpar_todos_pacientes(_conexao: oracledb.Connection) -> tuple[bool, any]:
     """Apaga todos os pacientes do banco e retorna status da operação."""
     try:
@@ -925,22 +962,22 @@ def limpar_todos_pacientes(_conexao: oracledb.Connection) -> tuple[bool, any]:
 #   EXPORTAR PACIENTES PARA JSON
 # ==========================================================
 
-def exportar_para_json(_conexao: oracledb.Connection, _colunas: list, _nome_arquivo: str = "pacientes.json") -> tuple[bool, any]:
-    #  """Exporta pacientes para JSON e retorna (True, None) se bem-sucedido ou (False, erro) se falhar."""
+# ========= EXPORTAR PACIENTES PARA JSON =========
+def exportar_para_json(_conexao: oracledb.Connection, _nome_arquivo: str = "pacientes.json") -> tuple[bool, any]:
     try:
-        colunas_dict = {}
-        for i, c in enumerate(_colunas):
-            colunas_dict[i + 1] = c
-
-        indices = list(range(1, len(_colunas) + 1))
-
-        lista_pacientes = buscar_todos_pacientes_como_dicionario(_conexao, colunas_dict, indices)
-
-
+        campos = """
+            ID_PACIENTE, NM_COMPLETO, DT_NASCIMENTO, SEXO, CPF, RG, ESTADO_CIVIL, BRASILEIRO,
+            CEP, RUA, BAIRRO, CIDADE, ESTADO, NUMERO_ENDERECO, CELULAR, EMAIL, CONVENIO,
+            DT_HORA_CONSULTA, TIPO_CONSULTA, ESPECIALIDADE, STATUS_CONSULTA,
+            DT_CADASTRO, DT_ULTIMA_ATUALIZACAO
+        """
+        sucesso, lista_pacientes = select_paciente(_conexao, campos)
+        if not sucesso:
+            return (False, lista_pacientes)
         if not lista_pacientes:
             return (False, "Nenhum paciente encontrado para exportar.")
 
-        # Converte datas para string legível, incluindo hora se houver
+        # Converte datas para string legível
         for paciente in lista_pacientes:
             for chave, valor in paciente.items():
                 if isinstance(valor, datetime):
@@ -948,7 +985,7 @@ def exportar_para_json(_conexao: oracledb.Connection, _colunas: list, _nome_arqu
                 elif isinstance(valor, date):
                     paciente[chave] = valor.strftime("%d/%m/%Y")
 
-        # Grava o arquivo JSON
+        # Salva no JSON
         with open(_nome_arquivo, "w", encoding="utf-8") as arquivo_json:
             json.dump(lista_pacientes, arquivo_json, ensure_ascii=False, indent=4)
 
@@ -956,4 +993,4 @@ def exportar_para_json(_conexao: oracledb.Connection, _colunas: list, _nome_arqu
 
     except Exception as e:
         return (False, e)
-'''
+
