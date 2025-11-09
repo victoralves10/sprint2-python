@@ -1,3 +1,65 @@
+# ==========================================================
+#   INSTRUÇÕES PARA EXECUTAR O PROGRAMA
+# ==========================================================
+# 1  -   Execute o comando SQL abaixo no 'Oracle SQL Developer' para criar as tabelas necessárias.
+# 2  -   Instale as bibliotecas exigidas no terminal:
+#         pip install oracledb
+#         pip install tabulate
+#         pip install requests
+#         pip install pandas
+
+# COMANDO SQL PARA ORACLE:
+
+"""
+-- Tabela de Pacientes
+CREATE TABLE T_PACIENTE (
+    ID_PACIENTE        NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    NM_COMPLETO        VARCHAR2(150) NOT NULL,
+    DT_NASCIMENTO      DATE NOT NULL,
+    SEXO               CHAR(1) NOT NULL,
+    CPF                VARCHAR2(11),
+    RG                 VARCHAR2(9),
+    ESTADO_CIVIL       VARCHAR2(20),
+    BRASILEIRO         CHAR(1),  -- S/N
+    CEP                VARCHAR2(8),
+    RUA                VARCHAR2(100),
+    BAIRRO             VARCHAR2(50),
+    CIDADE             VARCHAR2(50),
+    ESTADO             CHAR(2),
+    NUMERO_ENDERECO    NUMBER,
+    CELULAR            VARCHAR2(11),
+    EMAIL              VARCHAR2(100),
+    CONVENIO           CHAR(1),   -- S/N
+
+    -- Campos de consulta
+    DT_HORA_CONSULTA   TIMESTAMP,
+    TIPO_CONSULTA      VARCHAR2(20),
+    ESPECIALIDADE      VARCHAR2(50),
+    STATUS_CONSULTA    VARCHAR2(20),
+
+    -- Controle de registro
+    DT_CADASTRO        DATE DEFAULT SYSDATE,
+    DT_ULTIMA_ATUALIZACAO TIMESTAMP DEFAULT SYSTIMESTAMP
+);
+
+-- Trigger para atualizar automaticamente DT_ULTIMA_ATUALIZACAO
+CREATE OR REPLACE TRIGGER trg_t_paciente_atualizacao
+BEFORE UPDATE ON T_PACIENTE
+FOR EACH ROW
+BEGIN
+    :NEW.DT_ULTIMA_ATUALIZACAO := SYSTIMESTAMP;
+END;
+"""
+
+# Este programa utiliza a API pública do ViaCEP para consultar informações de endereços
+# a partir do CEP informado pelo usuário.
+# A API retorna dados como: Logradouro, Bairro, Cidade, Estado e outros dados relacionados ao CEP.
+
+# Após isso, o código estará pronto para ser executado.
+
+# Execute o programa pelo arquivo principal: main.py
+# (no terminal: python main.py)
+
 from cadastro_paciente import *
 
 campos_msg = """SELECIONE OS CAMPOS QUE DESEJA VISUALIZAR:
