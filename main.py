@@ -553,54 +553,137 @@ Digite 'A' para selecionar todas ou '0' para finalizar a seleção.
             input("\nPressione ENTER para continuar...")
 
 '''
-'''
-limpar_terminal()
-turnos = {
-    1: "Dia",
-    2: "Tarde",
-    3: "Noite"
+
+from cadastro_paciente import *
+
+campos_msg = """SELECIONE OS CAMPOS QUE DESEJA VISUALIZAR:
+
+=== DADOS PESSOAIS ===        === ENDEREÇO ===           === CONTATO / CONVÊNIO ===
+1  - ID DO PACIENTE           9  - CEP                  15 - CELULAR
+2  - NOME COMPLETO            10 - RUA                  16 - EMAIL
+3  - DATA DE NASCIMENTO       11 - NÚMERO DO ENDEREÇO   17 - CONVÊNIO (S/N)
+4  - SEXO                     12 - BAIRRO
+5  - CPF                      13 - CIDADE
+6  - RG                       14 - ESTADO
+7  - ESTADO CIVIL
+8  - BRASILEIRO (S/N)
+
+=== CONSULTA MÉDICA ===        === CONTROLE DE REGISTRO ===
+18 - DATA E HORA DA CONSULTA   22 - DATA DE CADASTRO
+19 - TIPO DE CONSULTA          23 - DATA DA ÚLTIMA ATUALIZAÇÃO
+20 - ESPECIALIDADE
+21 - STATUS DA CONSULTA
+
+- Digite os números dos campos separados por vírgula (por exemplo: 1,2,5,21,22,23)
+- Para selecionar todos os campos, digite: A
+
+DIGITE SUA ESCOLHA: """
+
+campos_dict = {
+    1: "ID_PACIENTE",       2: "NM_COMPLETO",       3: "DT_NASCIMENTO",
+    4: "SEXO",              5: "CPF",               6: "RG",
+    7: "ESTADO_CIVIL",      8: "BRASILEIRO",        9: "CEP",
+    10: "RUA",              11: "NUMERO_ENDERECO",  12: "BAIRRO",
+    13: "CIDADE",           14: "ESTADO",           15: "CELULAR",
+    16: "EMAIL",            17: "CONVENIO",         18: "DT_HORA_CONSULTA",
+    19: "TIPO_CONSULTA",    20: "ESPECIALIDADE",    21: "STATUS_CONSULTA",
+    22: "DT_CADASTRO",      23: "DT_ULTIMA_ATUALIZACAO"
 }
 
-msg_turnos = """Turnos:
-1 - Dia
-2 - Tarde
-3 - Noite
-'A' para selecionar todas as opções
-Entrada: """
 
+try:
+    user = "rm561833"
+    password = "070406"
+    dsn = "oracle.fiap.com.br:1521/ORCL"
+    ok, conn = conectar_oracledb(user, password, dsn)
+    conectado = bool(conn)
+except Exception as e:
+    conectado = False
 
-resultado_str, resultado_lista = obter_multiplas_opcoes_dict(msg_turnos,"Entrada inválida. Digite números separados por vírgula.", turnos)
+while conectado:
+    limpar_terminal()
+    exibir_titulo_centralizado("AXCESS TECH - SISTEMA DE GERENCIAMENTO DE PACIENTE", 60)
+    print("1 - REGISTRAR PACIENTE")
+    print("2 - CONSULTAR REGISTROS")
+    print("3 - ATUALIZAR REGISTROS")
+    print("4 - REMOVER REGISTRO")
+    print("5 - LIMPAR TODOS OS REGISTROS")
+    print("0 - SAIR")
+    print("")
+    escolha_menu = obter_int_intervalado("Escolha: ","Entrada inválida.",0,5)
 
-print("String retornada:", resultado_str)
-print("Lista retornada:", resultado_lista)
-'''
+    match escolha_menu:
 
+        case 0: # 0 - SAIR
+            limpar_terminal()
+            print("\nPrograma encerrado. Até logo!\n")
+            conectado = False
+        
+        case 1:  # 1 - REGISTRAR PACIENTE
+            limpar_terminal()
+            exibir_titulo_centralizado("MENU REGISTRO PACIENTE", 60)
+            
+            sucesso_dados, dados_registro = solicitar_dados_paciente()
 
-'''
-status
-realizada
-absenteismo
-cancelada
+            if sucesso_dados:
+                sucesso, erro = insert_paciente(conn, dados_registro)
 
+                if sucesso:
+                    limpar_terminal()
+                    print("\nPaciente registrado com sucesso!")
 
-especialidade
-cardiologia
-neurologia
-ortopedia
-dermatologia
-pediatria
-oftalmologia
-clinico geral
+                else:
+                    limpar_terminal()
+                    print("\nErro ao registrar paciente!")
+                    print(erro)
 
-tipo consulta
+            else:
+                limpar_terminal()
+                print("\nErro ao coletar os dados do paciente!")
 
-retorno
-emergencia
-"rotina
-exame
-geral
-'''
-limpar_terminal()
-sucesso, dados = solicitar_dados_paciente()
+            input("\nAperte ENTER para voltar ao menu principal...")
 
-imprimir_pacientes_tabulate(dados)
+        case 2:  # CONSULTAR REGISTROS
+            escolha_submenu = -1
+            while escolha_submenu != 0:
+                limpar_terminal()
+                exibir_titulo_centralizado("MENU CONSULTA PACIENTE", 60)
+
+                print("DESEJA FAZER SUA CONSULTA POR:")
+                print("1 - TODOS OS PACIENTES")
+                print("2 - POR ID DO PACIENTE")
+                print("3 - PESQUISA DE TEXTO")
+                print("4 - PESQUISA NUMÉRICA")
+                print("5 - PESQUISA LIVRE")
+                print("0 - VOLTAR")
+                print("")
+
+                escolha_submenu = obter_int_intervalado("Escolha: ","Entrada inválida.",0,5)
+
+                match escolha_submenu:
+                    case 0:
+                        escolha_submenu = 0
+
+                    case 1:  # TODOS OS PACIENTES
+                        limpar_terminal()
+                        exibir_titulo_centralizado("CONSULTA - TODOS OS PACIENTES", 60)
+                        
+                        texto, lista = obter_multiplas_opcoes_dict(
+                            campos_msg,
+                            "Erro! Escolha os campos separando os números por ',' .",
+                            campos_dict
+                        )
+
+                        limpar_terminal()
+                        print(f"campos em texto:\n{texto}\n")
+                        print(f"campos em lista:\n{lista}")
+
+                        input("\nAperte ENTER para voltar ao menu de consulta...")
+                    case 2:
+                        ...
+                    case 3:
+                        ...
+                    case 4:
+                        ...
+                    case 5:
+                        ...

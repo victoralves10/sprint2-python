@@ -205,10 +205,10 @@ def obter_int_intervalado(_msg_input: str, _msg_erro: str, _min: int, _max: int)
                 entrada_valida = True
 
             else:
-                print(f"{_msg_erro}. Digite entre {_min} e {_max}.\n")  # Entrada inválida.
+                print(f"{_msg_erro} Digite entre {_min} e {_max}.\n")  # Entrada inválida.
 
         except ValueError:
-            print(f"{_msg_erro}. Digite entre {_min} e {_max}.\n")
+            print(f"{_msg_erro} Digite entre {_min} e {_max}.\n")
 
     return entrada_numero
 
@@ -542,10 +542,12 @@ Escolha: """, "Opção inválida!", status_consulta_dict)
 
     return retorno
 
+# def solicitar_dados_paciente_update() -> dict:
+
 # ==========================================================
 #   FORMATAÇÃO DE VALORES
 # ==========================================================
-def formatar_valor(valor, largura_max: int = 20) -> str:
+# def formatar_valor(valor, largura_max: int = 20) -> str:
     """
     Formata um valor para exibição em tabela, quebrando linhas longas e tratando datas.
 
@@ -576,7 +578,7 @@ def formatar_valor(valor, largura_max: int = 20) -> str:
 #   IMPRESSÃO DE RESULTADOS ORACLE
 # ==========================================================
 
-def imprimir_resultado_oracle(resultado_cursor, largura_max: int = 20) -> tuple[bool, str]:
+def imprimir_resultado_tabulate_oracle(resultado_cursor, largura_max: int = 20) -> tuple[bool, str]:
     """
     Recebe o resultado de um SELECT do Oracle (cursor) e retorna a tabela formatada.
 
@@ -594,15 +596,20 @@ def imprimir_resultado_oracle(resultado_cursor, largura_max: int = 20) -> tuple[
 
         # Se for cursor, pegar colunas e dados
         if hasattr(resultado_cursor, "description"):
-            headers = [col[0] for col in resultado_cursor.description]
+            headers = []
+            for col in resultado_cursor.description:
+                headers.append(col[0])
             dados = resultado_cursor.fetchall()
         else:
             # Se for lista de tuplas (já fetchall)
             dados = resultado_cursor
+            headers = []
             if len(dados) > 0 and isinstance(dados[0], dict):
-                headers = list(dados[0].keys())
+                for key in dados[0].keys():
+                    headers.append(key)
             else:
-                headers = [f"Col{i+1}" for i in range(len(dados[0]))]
+                for i in range(len(dados[0])):
+                    headers.append(f"Col{i+1}")
 
         # Transformar em DataFrame para aplicar formatação
         df = pd.DataFrame(dados, columns=headers)
@@ -623,6 +630,17 @@ def imprimir_resultado_oracle(resultado_cursor, largura_max: int = 20) -> tuple[
 
     except Exception as e:
         return False, f"Erro ao imprimir resultado: {e}"
+
+def imprimir_resultado_vertical_oracle(dados: list[dict]) -> None:
+    if not dados:
+        print("Nenhum registro encontrado.")
+        return
+
+    registro = dados[0]
+    df = pd.DataFrame(list(registro.items()), columns=["Campo", "Valor"])
+    df.insert(0, "Nº", range(1, len(df) + 1))
+    
+    print(df.to_string(index=False))
 
 # ==========================================================
 #   CRUD BANCO DE DADOS
@@ -659,10 +677,9 @@ def verifica_tabela(_conexao: oracledb.Connection, nome_tabela: str) -> bool:
     finally:
         cur.close()
 
-# ========= INSERIR PACIENTE =========
-def inserir_paciente(_conexao: oracledb.Connection, _dados_paciente: dict) -> tuple[bool, any]:
-    """Insere um paciente no banco e retorna (True, None) se sucesso ou (False, erro) se falhar."""
-    retorno = None
+# ========= INSERT PACIENTE =========
+def insert_paciente(_conexao: oracledb.Connection, _dados_paciente: dict) -> tuple[bool, any]:
+
     try:
         comando_sql = """
         INSERT INTO T_PACIENTE (
@@ -680,12 +697,14 @@ def inserir_paciente(_conexao: oracledb.Connection, _dados_paciente: dict) -> tu
         cur.execute(comando_sql, _dados_paciente)
         _conexao.commit()
         cur.close()
-        retorno = (True, None)
-    except Exception as e:
-        retorno = (False, e)
-    return retorno
 
-# ========= UPDATE PACIENTE =========
+        return (True, None)
+
+    except Exception as e:
+        return (False, e)
+
+'''
+# ========= UPDATE PACIENTE POR ID =========
 def atualizar_paciente(_conexao: oracledb.Connection, _id_paciente: int, _dados_paciente: dict) -> tuple[bool, any]:
     """Atualiza os dados de um paciente pelo ID e retorna (True, None) ou (False, erro)."""
     try:
@@ -937,3 +956,4 @@ def exportar_para_json(_conexao: oracledb.Connection, _colunas: list, _nome_arqu
 
     except Exception as e:
         return (False, e)
+'''
