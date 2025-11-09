@@ -242,12 +242,10 @@ def obter_multiplas_opcoes_dict(_msg_input: str, _msg_erro: str, _opcoes_dict: d
     while not entrada_valida:
         entrada = input(_msg_input).strip().upper()
 
-        # Se o usuário apertar Enter ou deixar em branco
         if not entrada:
             print(f"{_msg_erro}\n")
             continue
 
-        # Se digitar 'A', seleciona todas as opções automaticamente
         if entrada == "A":
             valores_lista = []
             for chave in _opcoes_dict:
@@ -257,7 +255,6 @@ def obter_multiplas_opcoes_dict(_msg_input: str, _msg_erro: str, _opcoes_dict: d
             continue
 
         try:
-            # Divide a entrada e converte para inteiros
             numeros = []
             partes = entrada.split(",")
             for parte in partes:
@@ -265,12 +262,10 @@ def obter_multiplas_opcoes_dict(_msg_input: str, _msg_erro: str, _opcoes_dict: d
                 if parte:
                     numeros.append(int(parte))
 
-            # Se não houver números válidos
             if not numeros:
                 print(f"{_msg_erro}\n")
                 continue
 
-            # Verifica se todos os números existem no dicionário
             todos_validos = True
             for n in numeros:
                 if n not in _opcoes_dict:
@@ -751,7 +746,6 @@ def select_paciente_por_id(_conexao: oracledb.Connection, campos: str, _id_pacie
         for c in cur.description:
             colunas_cursor.append(c[0].lower())
 
-        # Obter dados
         resultados = cur.fetchall()
 
         cur.close()
@@ -972,7 +966,6 @@ def exportar_para_json(_dados: list[dict], _nome_arquivo: str = "pacientes.json"
         if not _dados:
             return (False, "Nenhum dado recebido para exportar.")
 
-        # Converte datas e datetimes para strings legíveis
         for item in _dados:
             for chave, valor in item.items():
                 if isinstance(valor, datetime):

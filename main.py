@@ -442,7 +442,7 @@ Escolha: """,
 
                                     print()
                                     campo_busca = obter_opcao_dict(
-                """Escolha o campo numérico para pesquisar:
+"""Escolha o campo numérico para pesquisar:
 1 - ID_PACIENTE
 2 - NUMERO_ENDERECO
 Escolha: """,
@@ -524,6 +524,7 @@ Escolha: """,
                                 print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
                                 input("\nAperte ENTER para voltar ao menu principal...")
 
+        case 3: 
             sucesso_select, resultados_preview = select_paciente(
                 conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
             )
