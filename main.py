@@ -198,7 +198,6 @@ while conectado:
                             limpar_terminal()
                             exibir_titulo_centralizado("CONSULTA - PACIENTE POR ID", 60)
 
-                            # Obter preview dos pacientes existentes
                             sucesso_select, resultados_preview = select_paciente(
                                 conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
                             )
@@ -230,10 +229,9 @@ while conectado:
                                         )
                                         
                                         try:
-                                            # Desempacotar corretamente a tupla retornada
                                             sucesso_select_id, resultados = select_paciente_por_id(conn, texto, _id_paciente)
 
-                                            if not resultados:  # lista vazia
+                                            if not resultados:
                                                 limpar_terminal()
                                                 print(f"\nNenhum paciente encontrado com ID {_id_paciente}.")
                                             else:
@@ -264,7 +262,6 @@ while conectado:
                             limpar_terminal()
                             exibir_titulo_centralizado("PESQUISA DE TEXTO - PACIENTES", 60)
 
-                            # Preview dos pacientes para referência
                             sucesso_select, resultados_preview = select_paciente(
                                 conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
                             )
@@ -285,7 +282,6 @@ while conectado:
                                     resp = obter_sim_nao("Deseja pesquisar paciente por texto? (S/N): ", "Erro. Digite S ou N.")
                                     print("")
                                     if resp:
-                                        # Campo para busca textual
                                         campo_busca_dict = {
                                             1: "NM_COMPLETO",
                                             2: "ESTADO_CIVIL",
@@ -318,14 +314,12 @@ Escolha: """,
 
                                         limpar_terminal()
                                         exibir_titulo_centralizado("PESQUISA DE TEXTO - PACIENTES", 60)
-                                        # Seleção de colunas para exibição
                                         texto_colunas, lista_colunas = obter_multiplas_opcoes_dict(
                                             campos_msg,
                                             "Erro! Escolha os campos separando os números por ',' .",
                                             campos_dict
                                         )
 
-                                        # Buscar pacientes
                                         resultados = buscar_paciente_por_texto(conn, campo_busca, texto_pesquisa, texto_colunas)
 
                                         if not resultados:
@@ -354,7 +348,6 @@ Escolha: """,
                             limpar_terminal()
                             exibir_titulo_centralizado("PESQUISA NUMÉRICA - PACIENTES", 60)
 
-                            # Preview dos pacientes para referência
                             sucesso_select, resultados_preview = select_paciente(
                                 conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
                             )
@@ -376,7 +369,6 @@ Escolha: """,
                                     if not resp:
                                         break
 
-                                    # Escolher o campo numérico para pesquisa
                                     campo_busca_dict = {1:"ID_PACIENTE",2:"NUMERO_ENDERECO"}
                                     print()
                                     campo_busca = obter_opcao_dict(
@@ -405,8 +397,6 @@ Escolha: """,
                                         {1: "=", 2: ">", 3: "<", 4: ">=", 5: "<=", 6: "<>"}
                                     )
 
-
-                                    # Seleção de colunas para exibição
                                     limpar_terminal()
                                     exibir_titulo_centralizado("PESQUISA NUMÉRICA - PACIENTES", 60)
                                     texto_colunas, lista_colunas = obter_multiplas_opcoes_dict(
@@ -415,7 +405,6 @@ Escolha: """,
                                         campos_dict
                                     )
 
-                                    # Buscar pacientes
                                     resultados = buscar_paciente_por_numero(conn, campo_busca, operador, valor, texto_colunas)
 
                                     if not resultados:
@@ -447,7 +436,6 @@ Escolha: """,
             limpar_terminal()
             exibir_titulo_centralizado("ATUALIZAR REGISTROS", 60)
 
-            # Preview dos pacientes para referência
             sucesso_select, resultados_preview = select_paciente(
                 conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
             )
@@ -469,10 +457,8 @@ Escolha: """,
                     if not resp:
                         break
 
-                    # Selecionar paciente pelo ID
                     _id_paciente = obter_int("\nDigite o ID do paciente que deseja atualizar: ", "ID inválido. Digite um número inteiro.")
 
-                    # Buscar paciente específico
                     sucesso, resultados = select_paciente_por_id(conn, "*", _id_paciente)
                     if not resultados:
                         limpar_terminal()
@@ -480,12 +466,10 @@ Escolha: """,
                         input("\nAperte ENTER para voltar ao menu de atualização...")
                         continue
 
-                    # Exibir paciente selecionado verticalmente
                     limpar_terminal()
                     exibir_titulo_centralizado(f"PACIENTE - ID {_id_paciente}", 60)
                     imprimir_resultado_vertical_oracle(resultados)
 
-                    # Dicionário de campos possíveis para atualização
                     campos_dict = {
                         1: "NM_COMPLETO",
                         2: "DATA_NASCIMENTO",
@@ -506,7 +490,7 @@ Escolha: """,
                     }
 
                     print()
-                    # Escolher campo para atualizar
+
                     campo = obter_opcao_dict("""Escolha o campo que deseja atualizar:
 1 - Nome
 2 - Data de Nascimento
@@ -529,7 +513,6 @@ Escolha: """,
                         campos_dict
                     )
 
-                    # Chamar a função de atualização
                     sucesso_update, erro = atualizar_coluna_paciente(conn, _id_paciente, campo)
 
                     if sucesso_update:
@@ -551,7 +534,6 @@ Escolha: """,
             limpar_terminal()
             exibir_titulo_centralizado("REMOVER REGISTRO", 60)
 
-            # Preview dos pacientes para referência
             sucesso_select, resultados_preview = select_paciente(
                 conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
             )

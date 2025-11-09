@@ -550,13 +550,14 @@ Escolha: """, "Opção inválida!", status_consulta_dict)
 
     return retorno
 
-# def solicitar_dados_paciente_update() -> dict:
-
 # ==========================================================
 #   FORMATAÇÃO DE VALORES
 # ==========================================================
 def formatar_valor(valor, largura_max: int = 20) -> str:
-
+    """
+    Formata um valor para exibição, convertendo datas em strings legíveis
+    e quebrando textos longos em múltiplas linhas com largura máxima.
+    Retorna uma string pronta para exibição em tabelas"""
     if valor is None:
         return ""
     elif isinstance(valor, datetime):
@@ -579,28 +580,21 @@ def formatar_valor(valor, largura_max: int = 20) -> str:
 
 def imprimir_resultado_tabulate_oracle(resultado_cursor, largura_max: int = 20) -> tuple[bool, str]:
     """
-    Recebe o resultado de um SELECT do Oracle (cursor) e retorna a tabela formatada.
-
-    Args:
-        resultado_cursor: cursor do Oracle ou lista de tuplas/dicionários
-        largura_max: largura máxima das células antes de quebrar linha
-
-    Returns:
-        tuple: (sucesso: bool, tabela_ou_mensagem: str)
+    Converte resultados de consulta Oracle em uma tabela formatada usando Tabulate,
+    aplicando quebra de linhas em textos longos e formatação de datas.
+    Retorna uma tupla com sucesso e a string da tabela pronta para exibição.
     """
     try:
         # Se não houver resultados
         if not resultado_cursor:
             return False, "Nenhum registro encontrado."
 
-        # Se for cursor, pegar colunas e dados
         if hasattr(resultado_cursor, "description"):
             headers = []
             for col in resultado_cursor.description:
                 headers.append(col[0])
             dados = resultado_cursor.fetchall()
         else:
-            # Se for lista de tuplas (já fetchall)
             dados = resultado_cursor
             headers = []
             if len(dados) > 0 and isinstance(dados[0], dict):
@@ -610,7 +604,6 @@ def imprimir_resultado_tabulate_oracle(resultado_cursor, largura_max: int = 20) 
                 for i in range(len(dados[0])):
                     headers.append(f"Col{i+1}")
 
-        # Transformar em DataFrame para aplicar formatação
         df = pd.DataFrame(dados, columns=headers)
 
         # Formatar valores
@@ -631,6 +624,10 @@ def imprimir_resultado_tabulate_oracle(resultado_cursor, largura_max: int = 20) 
         return False, f"Erro ao imprimir resultado: {e}"
 
 def imprimir_resultado_vertical_oracle(dados: list[dict]) -> None:
+    """
+    Exibe os dados de um registro Oracle em formato vertical, mostrando
+    cada campo e seu valor. Mostra mensagem se não houver registros.
+    """
     if not dados:
         print("Nenhum registro encontrado.")
         return
@@ -680,7 +677,11 @@ def verifica_tabela(_conexao: oracledb.Connection, nome_tabela: str) -> bool:
 
 # ========= INSERT PACIENTE =========
 def insert_paciente(_conexao: oracledb.Connection, _dados_paciente: dict) -> tuple[bool, any]:
-
+    """
+    Insere um novo paciente na tabela T_PACIENTE do banco Oracle usando os dados fornecidos.
+    Converte datas e horários para os formatos adequados e realiza commit da transação.
+    Retorna uma tupla indicando sucesso e, em caso de erro, o objeto de exceção.
+    """
     try:
         comando_sql = """
         INSERT INTO T_PACIENTE (
@@ -731,6 +732,11 @@ def select_paciente(_conexao: oracledb.Connection, _campos: str) -> tuple[bool, 
 
 # ========= SELECT PACIENTE POR ID =========
 def select_paciente_por_id(_conexao: oracledb.Connection, campos: str, _id_paciente: int) -> tuple[bool, any]:
+    """
+    Recupera os dados de um paciente específico pelo ID a partir da tabela T_PACIENTE.
+    Retorna apenas os campos especificados e converte o resultado em lista de dicionários.
+    Retorna uma tupla com sucesso (True/False) e os dados ou mensagem de erro.
+    """
 
     if not _id_paciente:
         return False, "Erro: é necessário informar o ID do paciente."
@@ -761,6 +767,12 @@ def select_paciente_por_id(_conexao: oracledb.Connection, campos: str, _id_pacie
 
 # ========= SELECT PACIENTE POR TEXTO =========
 def buscar_paciente_por_texto(_conexao: oracledb.Connection, _campo_where: str, _texto: str, _colunas_exibir: str) -> list[dict]:
+    """
+    Busca pacientes na tabela T_PACIENTE filtrando por texto em um campo específico.
+    Retorna apenas as colunas selecionadas e converte os resultados em lista de dicionários.
+    Campos inválidos ou erros de execução retornam uma lista vazia.
+    """
+
     campos_validos = ["NM_COMPLETO", "ESTADO_CIVIL", "RUA", "BAIRRO", "CIDADE", "EMAIL", "TIPO_CONSULTA",
     "ESPECIALIDADE", "STATUS_CONSULTA"]
 
@@ -785,7 +797,6 @@ def buscar_paciente_por_texto(_conexao: oracledb.Connection, _campo_where: str, 
 
         colunas = [col[0].upper() for col in cur.description]
 
-        # Transformar resultados em lista de dicionários
         lista_pacientes = [dict(zip(colunas, linha)) for linha in resultados]
 
         return lista_pacientes
@@ -800,18 +811,11 @@ def buscar_paciente_por_texto(_conexao: oracledb.Connection, _campo_where: str, 
 # ========= SELECT PACIENTE POR NÚMERO =========
 def buscar_paciente_por_numero(_conexao: oracledb.Connection, _campo: str, _operador: str, _valor: int, _colunas_exibir: str) -> list[dict]:
     """
-    Busca pacientes por valor numérico em um campo usando operador e retorna lista de dicionários.
-    
-    Args:
-        _conexao (oracledb.Connection): conexão ativa com Oracle
-        _campo (str): nome do campo numérico para filtro
-        _operador (str): operador de comparação (=, >, <, >=, <=)
-        _valor (int): valor a ser pesquisado
-        _colunas_exibir (str): string com os nomes das colunas a exibir, separados por vírgula
-    
-    Returns:
-        list[dict]: lista de dicionários com os resultados
+    Busca pacientes na tabela T_PACIENTE filtrando por valor numérico em um campo específico.
+    Retorna apenas as colunas selecionadas como lista de dicionários.
+    Erros de execução resultam em uma lista vazia.
     """
+
     comando_sql = f"SELECT {_colunas_exibir} FROM T_PACIENTE WHERE {_campo} {_operador} :valor"
     cur = _conexao.cursor()
 
@@ -820,7 +824,6 @@ def buscar_paciente_por_numero(_conexao: oracledb.Connection, _campo: str, _oper
         resultados = cur.fetchall()
         nomes_colunas = [col[0].upper() for col in cur.description]
 
-        # Transformar resultados em lista de dicionários
         lista_pacientes = [dict(zip(nomes_colunas, linha)) for linha in resultados]
 
         return lista_pacientes
@@ -832,6 +835,7 @@ def buscar_paciente_por_numero(_conexao: oracledb.Connection, _campo: str, _oper
     finally:
         cur.close()
 
+# ========= UPDATE PACIENTE POR ID =========
 def atualizar_coluna_paciente(conn, id_paciente, coluna):
     """
     Atualiza uma coluna específica de um paciente.
@@ -841,7 +845,6 @@ def atualizar_coluna_paciente(conn, id_paciente, coluna):
     try:
         coluna_upper = coluna.upper()
         
-        # Solicita o valor correto conforme a coluna
         match coluna_upper:
             # DADOS DO PACIENTE
             case "NM_COMPLETO":
@@ -911,7 +914,6 @@ Escolha: """, "Opção inválida!", status_consulta_dict)
             case _:
                 return (False, f"Coluna '{coluna}' não reconhecida!")
 
-        # Monta e executa o comando SQL
         comando_sql = f"UPDATE T_PACIENTE SET {coluna_upper} = :valor WHERE ID_PACIENTE = :id_paciente"
         dados_paciente = {"valor": valor, "id_paciente": id_paciente}
 
@@ -925,14 +927,15 @@ Escolha: """, "Opção inválida!", status_consulta_dict)
     except Exception as e:
         return (False, e)
 
+# ========= DELETE PACIENTE POR ID =========
 def deletar_paciente(_conexao: oracledb.Connection, _id_paciente: int) -> tuple[bool, any]:
     """Remove paciente pelo ID e retorna status da operação."""
     try:
         comando_sql = "DELETE FROM T_PACIENTE WHERE ID_PACIENTE = :id"
         cur = _conexao.cursor()
         cur.execute(comando_sql, {"id": _id_paciente})
-        # Verifica se alguma linha foi afetada
-        if cur.rowcount == 0: # verifica quantas linhas foram realmente deletadas.
+
+        if cur.rowcount == 0:
             _conexao.rollback()
             cur.close()
             return (False, "Nenhum paciente encontrado com este ID para remover.")
@@ -943,6 +946,7 @@ def deletar_paciente(_conexao: oracledb.Connection, _id_paciente: int) -> tuple[
     except Exception as e:
         return (False, e)
 
+# ========= DELETE TODOS PACIENTE =========
 def limpar_todos_pacientes(_conexao: oracledb.Connection) -> tuple[bool, any]:
     """Apaga todos os pacientes do banco e retorna status da operação."""
     try:
