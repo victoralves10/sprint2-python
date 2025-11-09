@@ -1,0 +1,50 @@
+[
+    {
+        "id_paciente": 4,
+        "nm_completo": "João da Silva",
+        "dt_nascimento": "15/03/1985 00:00",
+        "sexo": "M",
+        "dt_cadastro": "09/11/2025 10:06",
+        "dt_ultima_atualizacao": "09/11/2025 10:06"
+    },
+    {
+        "id_paciente": 5,
+        "nm_completo": "Maria Oliveira",
+        "dt_nascimento": "22/07/1990 00:00",
+        "sexo": "F",
+        "dt_cadastro": "09/11/2025 10:06",
+        "dt_ultima_atualizacao": "09/11/2025 10:06"
+    },
+    {
+        "id_paciente": 6,
+        "nm_completo": "Carlos Mendes",
+        "dt_nascimento": "05/01/1978 00:00",
+        "sexo": "M",
+        "dt_cadastro": "09/11/2025 10:06",
+        "dt_ultima_atualizacao": "09/11/2025 10:06"
+    },
+    {
+        "id_paciente": 7,
+        "nm_completo": "Ana Paula Souza",
+        "dt_nascimento": "09/09/2000 00:00",
+        "sexo": "F",
+        "dt_cadastro": "09/11/2025 10:06",
+        "dt_ultima_atualizacao": "09/11/2025 10:06"
+    },
+    {
+        "id_paciente": 8,
+        "nm_completo": "Fernanda Lima",
+        "dt_nascimento": "30/12/1988 00:00",
+        "sexo": "F",
+        "dt_cadastro": "09/11/2025 10:06",
+        "dt_ultima_atualizacao": "09/11/2025 14:06"
+    },
+    {
+        "id_paciente": 9,
+        "nm_completo": "Victor Alves Lopes",
+        "dt_nascimento": "07/04/2006 00:00",
+        "sexo": "M",
+        "dt_cadastro": "09/11/2025 14:44",
+        "dt_ultima_atualizacao": "09/11/2025 14:44"
+    }
+]

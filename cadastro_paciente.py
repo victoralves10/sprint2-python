@@ -81,7 +81,7 @@ from tabulate import tabulate
 # ==========================================================
 
 def limpar_terminal() -> None:
-    """Limpa a tela do terminal, compatível com Windows e Unix."""
+    """Limpa a tela do terminal, compatível com Windows e Linux."""
     os.system("cls" if os.name == "nt" else "clear")
 
 def exibir_titulo_centralizado(_texto: str, _largura_caracteres: int) -> None:
