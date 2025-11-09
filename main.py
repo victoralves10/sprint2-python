@@ -192,6 +192,27 @@ while conectado:
                                 print("\nErro ao consultar pacientes no banco de dados:")
                                 print(busca)
 
+                            deseja_exportar = obter_sim_nao(
+                                "\nDeseja exportar essa consulta para um arquivo JSON? (S/N): ",
+                                "Entrada inválida! Digite 'S' para Sim ou 'N' para Não."
+                            )
+
+                            if deseja_exportar:
+                                nome_arquivo = input(
+                                    "\nDigite o nome do arquivo (ex: pacientes.json): "
+                                ).strip()
+
+                                if not nome_arquivo:
+                                    nome_arquivo = "pacientes.json"
+                                elif not nome_arquivo.lower().endswith(".json"):
+                                    nome_arquivo += ".json"
+
+                                sucesso_export, erro_export = exportar_para_json(busca, nome_arquivo)
+                                if sucesso_export:
+                                    print(f"\nConsulta exportada com sucesso para '{nome_arquivo}'!")
+                                else:
+                                    print(f"\nErro ao exportar para JSON: {erro_export}")
+
                             input("\nAperte ENTER para voltar ao menu de consulta...")
 
                         case 2:  # POR ID DO PACIENTE
@@ -240,6 +261,28 @@ while conectado:
                                                     limpar_terminal()
                                                     exibir_titulo_centralizado(f"PACIENTE - ID {_id_paciente}", 60)
                                                     print(tabela)
+
+                                                    deseja_exportar = obter_sim_nao(
+                                                        "\nDeseja exportar esta consulta para um arquivo JSON? (S/N): ",
+                                                        "Entrada inválida! Digite 'S' para Sim ou 'N' para Não."
+                                                    )
+
+                                                    if deseja_exportar:
+                                                        nome_arquivo = input(
+                                                            "\nDigite o nome do arquivo (ex: paciente.json): "
+                                                        ).strip()
+
+                                                        if not nome_arquivo:
+                                                            nome_arquivo = f"paciente_{_id_paciente}.json"
+                                                        elif not nome_arquivo.lower().endswith(".json"):
+                                                            nome_arquivo += ".json"
+
+                                                        sucesso_export, erro_export = exportar_para_json(resultados, nome_arquivo)
+                                                        if sucesso_export:
+                                                            print(f"\nConsulta exportada com sucesso para '{nome_arquivo}'!")
+                                                        else:
+                                                            print(f"\nErro ao exportar para JSON: {erro_export}")
+
                                                 else:
                                                     limpar_terminal()
                                                     print("\nErro ao formatar os resultados:")
@@ -295,7 +338,7 @@ while conectado:
                                         }
 
                                         campo_busca = obter_opcao_dict(
-                                            """Escolha o campo para pesquisar por texto:
+"""Escolha o campo para pesquisar por texto:
 1 - Nome
 2 - Estado Civil
 3 - Rua
@@ -331,6 +374,28 @@ Escolha: """,
                                                 limpar_terminal()
                                                 exibir_titulo_centralizado(f"RESULTADOS DA PESQUISA - {campo_busca}", 60)
                                                 print(tabela)
+
+                                                deseja_exportar = obter_sim_nao(
+                                                    "\nDeseja exportar o resultado desta pesquisa para um arquivo JSON? (S/N): ",
+                                                    "Entrada inválida! Digite 'S' para Sim ou 'N' para Não."
+                                                )
+
+                                                if deseja_exportar:
+                                                    nome_arquivo = input(
+                                                        "\nDigite o nome do arquivo (ex: pesquisa_pacientes.json): "
+                                                    ).strip()
+
+                                                    if not nome_arquivo:
+                                                        nome_arquivo = f"pesquisa_{campo_busca.lower()}_{texto_pesquisa.lower().replace(' ', '_')}.json"
+                                                    elif not nome_arquivo.lower().endswith(".json"):
+                                                        nome_arquivo += ".json"
+
+                                                    sucesso_export, erro_export = exportar_para_json(resultados, nome_arquivo)
+                                                    if sucesso_export:
+                                                        print(f"\nPesquisa exportada com sucesso para '{nome_arquivo}'!")
+                                                    else:
+                                                        print(f"\nErro ao exportar para JSON: {erro_export}")
+
                                             else:
                                                 limpar_terminal()
                                                 print("\nErro ao formatar os resultados:")
@@ -343,6 +408,7 @@ Escolha: """,
                                 limpar_terminal()
                                 print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
                                 input("\nAperte ENTER para voltar ao menu principal...")
+
 
                         case 4:  # PESQUISA NUMÉRICA
                             limpar_terminal()
@@ -369,13 +435,16 @@ Escolha: """,
                                     if not resp:
                                         break
 
-                                    campo_busca_dict = {1:"ID_PACIENTE",2:"NUMERO_ENDERECO"}
+                                    campo_busca_dict = {
+                                        1: "ID_PACIENTE",
+                                        2: "NUMERO_ENDERECO"
+                                    }
+
                                     print()
                                     campo_busca = obter_opcao_dict(
-                                        """Escolha o campo numérico para pesquisar:
-1. ID_PACIENTE
-2. NUMERO_ENDERECO"
-
+                """Escolha o campo numérico para pesquisar:
+1 - ID_PACIENTE
+2 - NUMERO_ENDERECO
 Escolha: """,
                                         "Opção inválida!",
                                         campo_busca_dict
@@ -385,13 +454,13 @@ Escolha: """,
 
                                     print()
                                     operador = obter_opcao_dict(
-                                        """Escolha o operador para pesquisa:
-1. Igual (=)
-2. Maior (>)
-3. Menor (<)
-4. Maior ou igual (>=)
-5. Menor ou igual (<=)
-6. Diferente (<>)
+                """Escolha o operador para pesquisa:
+1 - Igual (=)
+2 - Maior (>)
+3 - Menor (<)
+4 - Maior ou igual (>=)
+5 - Menor ou igual (<=)
+6 - Diferente (<>)
 Escolha: """,
                                         "Opção inválida!",
                                         {1: "=", 2: ">", 3: "<", 4: ">=", 5: "<=", 6: "<>"}
@@ -405,36 +474,55 @@ Escolha: """,
                                         campos_dict
                                     )
 
-                                    resultados = buscar_paciente_por_numero(conn, campo_busca, operador, valor, texto_colunas)
+                                    try:
+                                        resultados = buscar_paciente_por_numero(conn, campo_busca, operador, valor, texto_colunas)
 
-                                    if not resultados:
-                                        limpar_terminal()
-                                        print(f"\nNenhum paciente encontrado com {campo_busca} {operador} {valor}.")
-                                    else:
-                                        sucesso, tabela = imprimir_resultado_tabulate_oracle(resultados)
-                                        if sucesso:
+                                        if not resultados:
                                             limpar_terminal()
-                                            exibir_titulo_centralizado(f"RESULTADOS DA PESQUISA - {campo_busca}", 60)
-                                            print(tabela)
+                                            print(f"\nNenhum paciente encontrado com {campo_busca} {operador} {valor}.")
                                         else:
-                                            limpar_terminal()
-                                            print("\nErro ao formatar os resultados:")
-                                            print(tabela)
+                                            sucesso, tabela = imprimir_resultado_tabulate_oracle(resultados)
+                                            if sucesso:
+                                                limpar_terminal()
+                                                exibir_titulo_centralizado(f"RESULTADOS - {campo_busca} {operador} {valor}", 60)
+                                                print(tabela)
+
+                                                deseja_exportar = obter_sim_nao(
+                                                    "\nDeseja exportar o resultado desta pesquisa para um arquivo JSON? (S/N): ",
+                                                    "Entrada inválida! Digite 'S' para Sim ou 'N' para Não."
+                                                )
+
+                                                if deseja_exportar:
+                                                    nome_arquivo = input(
+                                                        "\nDigite o nome do arquivo (ex: pesquisa_numerica.json): "
+                                                    ).strip()
+
+                                                    if not nome_arquivo:
+                                                        nome_arquivo = f"pesquisa_{campo_busca.lower()}_{valor}.json"
+                                                    elif not nome_arquivo.lower().endswith(".json"):
+                                                        nome_arquivo += ".json"
+
+                                                    sucesso_export, erro_export = exportar_para_json(resultados, nome_arquivo)
+                                                    if sucesso_export:
+                                                        print(f"\nPesquisa exportada com sucesso para '{nome_arquivo}'!")
+                                                    else:
+                                                        print(f"\nErro ao exportar para JSON: {erro_export}")
+                                            else:
+                                                limpar_terminal()
+                                                print("\nErro ao formatar os resultados:")
+                                                print(tabela)
+
+                                    except Exception as e:
+                                        limpar_terminal()
+                                        print("\nErro ao realizar a pesquisa numérica:")
+                                        print(e)
 
                                     input("\nAperte ENTER para continuar...")
+
                             else:
                                 limpar_terminal()
                                 print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
                                 input("\nAperte ENTER para voltar ao menu principal...")
-
-            else:
-                limpar_terminal()
-                print("\nNenhum registro encontrado na tabela T_PACIENTE para consulta.")
-                input("\nAperte ENTER para voltar ao menu principal...")
-
-        case 3:  # ATUALIZAR REGISTROS
-            limpar_terminal()
-            exibir_titulo_centralizado("ATUALIZAR REGISTROS", 60)
 
             sucesso_select, resultados_preview = select_paciente(
                 conn, "ID_PACIENTE, NM_COMPLETO, TIPO_CONSULTA, STATUS_CONSULTA"
@@ -527,8 +615,6 @@ Escolha: """,
                 limpar_terminal()
                 print(f"\nNão foi possível exibir o preview dos pacientes.\n{tabela_preview}")
                 input("\nAperte ENTER para voltar ao menu principal...")
-
-
 
         case 4:  # REMOVER REGISTRO
             limpar_terminal()

@@ -967,31 +967,22 @@ def limpar_todos_pacientes(_conexao: oracledb.Connection) -> tuple[bool, any]:
 # ==========================================================
 
 # ========= EXPORTAR PACIENTES PARA JSON =========
-def exportar_para_json(_conexao: oracledb.Connection, _nome_arquivo: str = "pacientes.json") -> tuple[bool, any]:
+def exportar_para_json(_dados: list[dict], _nome_arquivo: str = "pacientes.json") -> tuple[bool, any]:
     try:
-        campos = """
-            ID_PACIENTE, NM_COMPLETO, DT_NASCIMENTO, SEXO, CPF, RG, ESTADO_CIVIL, BRASILEIRO,
-            CEP, RUA, BAIRRO, CIDADE, ESTADO, NUMERO_ENDERECO, CELULAR, EMAIL, CONVENIO,
-            DT_HORA_CONSULTA, TIPO_CONSULTA, ESPECIALIDADE, STATUS_CONSULTA,
-            DT_CADASTRO, DT_ULTIMA_ATUALIZACAO
-        """
-        sucesso, lista_pacientes = select_paciente(_conexao, campos)
-        if not sucesso:
-            return (False, lista_pacientes)
-        if not lista_pacientes:
-            return (False, "Nenhum paciente encontrado para exportar.")
+        if not _dados:
+            return (False, "Nenhum dado recebido para exportar.")
 
-        # Converte datas para string legível
-        for paciente in lista_pacientes:
-            for chave, valor in paciente.items():
+        # Converte datas e datetimes para strings legíveis
+        for item in _dados:
+            for chave, valor in item.items():
                 if isinstance(valor, datetime):
-                    paciente[chave] = valor.strftime("%d/%m/%Y %H:%M")
+                    item[chave] = valor.strftime("%d/%m/%Y %H:%M")
                 elif isinstance(valor, date):
-                    paciente[chave] = valor.strftime("%d/%m/%Y")
+                    item[chave] = valor.strftime("%d/%m/%Y")
 
-        # Salva no JSON
+        # Salva os dados em um arquivo JSON
         with open(_nome_arquivo, "w", encoding="utf-8") as arquivo_json:
-            json.dump(lista_pacientes, arquivo_json, ensure_ascii=False, indent=4)
+            json.dump(_dados, arquivo_json, ensure_ascii=False, indent=4)
 
         return (True, None)
 
